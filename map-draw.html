@@ -47,12 +47,12 @@
       <small id="snapurl" class="note"></small>
     </div>
     <div class="row" style="margin-top:8px">
-      <!-- CHANGED: this now saves first -->
       <button id="saveContinue" class="btn primary" onclick="saveQuote()">Save & Continue</button>
     </div>
   </section>
 </main>
 
+<!-- Libraries -->
 <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
 <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.5.0/mapbox-gl-draw.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
@@ -62,10 +62,10 @@
   /* ======================
      1) CONFIG (EDIT THESE)
      ====================== */
-  mapboxgl.accessToken = 'pk.eyJ1IjoibWlrZW5vcnJpcyIsImEiOiJjbWU0eXIyMHQwb3NlMm1wcHNkYXRwYzYxIn0.HrNdh-cFPgqR4SSYgkdHTw';
-  const SUPABASE_URL = 'https://yikxwceipqtxjarcnxdr.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlpa3h3Y2VpcHF0eGphcmNueGRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ3NzkyMTIsImV4cCI6MjA3MDM1NTIxMn0.PmvRyNucXrOMXcwsXIWAaK6pfia0bzEXUw53cHEhFqI'; // anon key only
-  const ACCOUNT_ID = '0c3c69de-450c-4b76-91a7-cdc70d64ec9d'; // from accounts table
+mapboxgl.accessToken = 'pk.eyJ1IjoibWlrZW5vcnJpcyIsImEiOiJjbWU0eXIyMHQwb3NlMm1wcHNkYXRwYzYxIn0.HrNdh-cFPgqR4SSYgkdHTw';              // pk.xxxxxx
+  const SUPABASE_URL = 'https://yikxwceipqtxjarcnxdr.supabase.co';                // https://xxxx.supabase.co
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlpa3h3Y2VpcHF0eGphcmNueGRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ3NzkyMTIsImV4cCI6MjA3MDM1NTIxMn0.PmvRyNucXrOMXcwsXIWAaK6pfia0bzEXUw53cHEhFqI';      // anon key ONLY
+  const ACCOUNT_ID = '0c3c69de-450c-4b76-91a7-cdc70d64ec9d';                  // from accounts table
 
   /* ==============
      2) MAP SETUP
@@ -75,6 +75,7 @@
     style:'mapbox://styles/mapbox/satellite-streets-v12',
     center:[-79.3832,43.6532], zoom:15
   });
+
   const Draw = new MapboxDraw({
     displayControlsDefault:false,
     controls:{ polygon:true, line_string:true, trash:true },
