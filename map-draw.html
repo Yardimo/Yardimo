@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Yardimo • Map Draw</title>
+  <title>Yardimo • Map Draw (v6.1)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 
   <!-- Mapbox GL -->
@@ -27,7 +27,8 @@
     :root{
       --bg:#0b0f14; --panel:#0f1720; --muted:#1c2633; --text:#eaf2f6; --sub:#b8c5cf;
       --brand:#2dd4bf; --warn:#ffd447; --danger:#f87171;
-      --panel-h: 230px; /* mobile-friendly height */
+      /* Mobile-friendly, adapts to short screens */
+      --panel-h: clamp(200px, 33vh, 260px);
     }
     @media (min-width:900px){ :root{ --panel-h: 150px; } }
 
@@ -60,8 +61,9 @@
     label{color:var(--sub);font-size:14px;display:flex;align-items:center;gap:6px}
     input{background:#0b0f14;color:var(--text);border:1px solid var(--muted);border-radius:8px;padding:8px 10px;width:92px}
 
-    /* Floating mini toolbar (always visible) */
+    /* Floating mini toolbar (mobile only) */
     #fab{position:fixed;right:12px;bottom:calc(var(--panel-h) + 12px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px;z-index:9}
+    @media (min-width:900px){ #fab{ display:none; } }
 
     /* Error ribbon */
     #err{display:none;position:fixed;left:0;right:0;top:0;z-index:9999;background:#7f1d1d;color:#fff;padding:8px 10px;font-size:14px}
@@ -72,27 +74,27 @@
 <div id="err"></div>
 
 <!-- Top bar -->
-<div class="top">
-  <div id="lawnBtn" class="toggle active">Lawn Care</div>
-  <div id="snowBtn" class="toggle">Snow Removal</div>
+<div class="top" role="toolbar" aria-label="Service mode">
+  <button id="lawnBtn" class="toggle active" aria-pressed="true" aria-label="Switch to Lawn Care">Lawn Care</button>
+  <button id="snowBtn" class="toggle" aria-pressed="false" aria-label="Switch to Snow Removal">Snow Removal</button>
 </div>
 
 <!-- Geocoder & Map -->
 <div id="geocoder"></div>
-<div id="map"></div>
+<div id="map" aria-label="Map drawing area"></div>
 
-<!-- Floating mini toolbar -->
-<div id="fab">
-  <button id="fabArea" class="btn">+ Area</button>
-  <button id="fabLine" class="btn">+ Edge</button>
-  <button id="fabDone" class="btn">Finish</button>
+<!-- Floating mini toolbar (mobile) -->
+<div id="fab" aria-label="Drawing quick actions">
+  <button id="fabArea" class="btn" aria-label="Add Area">+ Area</button>
+  <button id="fabLine" class="btn" aria-label="Add Edge">+ Edge</button>
+  <button id="fabDone" class="btn" aria-label="Finish Drawing">Finish</button>
 </div>
 
 <!-- Bottom panel -->
 <div class="panel">
-  <div class="box">Area: <b id="areaSqft">0</b> sqft</div>
-  <div class="box">Linear: <b id="lengthM">0</b> m</div>
-  <div class="box">Quote: <b id="quoteTotal">$0.00</b></div>
+  <div class="box" aria-live="polite">Area: <b id="areaSqft">0</b> sqft</div>
+  <div class="box" aria-live="polite">Linear: <b id="lengthM">0</b> m</div>
+  <div class="box" aria-live="polite">Quote: <b id="quoteTotal">$0.00</b></div>
 
   <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
     <div id="lawnRates" style="display:flex;gap:10px;flex-wrap:wrap">
@@ -108,18 +110,26 @@
   </div>
 
   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-    <button class="btn" id="btnPoly">Add Area</button>
-    <button class="btn" id="btnLine">Add Edge</button>
-    <button class="btn" id="btnFinish">Finish</button>
-    <button class="btn" id="btnUndo">Undo</button>
-    <button class="btn danger" id="btnClear">Clear</button>
-    <button class="btn primary" id="btnSave">Save Quote</button>
+    <button class="btn" id="btnPoly" aria-label="Add Area">Add Area</button>
+    <button class="btn" id="btnLine" aria-label="Add Edge">Add Edge</button>
+    <button class="btn" id="btnFinish" aria-label="Finish Drawing">Finish</button>
+    <button class="btn" id="btnUndo" aria-label="Undo last action">Undo</button>
+    <button class="btn danger" id="btnClear" aria-label="Clear map">Clear</button>
+    <button class="btn primary" id="btnSave" aria-label="Save Quote">Save Quote</button>
   </div>
 </div>
 
 <script>
-  /* ========= Credentials from you ========= */
-  mapboxgl.accessToken = 'pk.eyJ1IjoibWlrZW5vcnJpcyIsImEiOiJjbWU0eXIyMHQwb3NlMm1wcHNkYXRwYzYxIn0.HrNdh-cFPgqR4SSYgkdHTw'; // Mapbox
+  /*
+   * ====== Security note (Supabase RLS) ======
+   * Using the anon key in the browser is OK only if Row Level Security is ON
+   * and policies restrict writes to the current ACCOUNT_ID or user context.
+   * Ensure 'properties', 'zones', and 'quotes' all have RLS enabled and
+   * per-account policies (or move writes to a server/edge function).
+   */
+
+  /* ========= Credentials (yours) ========= */
+  mapboxgl.accessToken = 'pk.eyJ1IjoibWlrZW5vcnJpcyIsImEiOiJjbWU0eXIyMHQwb3NlMm1wcHNkYXRwYzYxIn0.HrNdh-cFPgqR4SSYgkdHTw';
   const SUPABASE_URL = 'https://yikxwceipqtxjarcnxdr.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlpa3h3Y2VpcHF0eGphcmNueGRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ3NzkyMTIsImV4cCI6MjA3MDM1NTIxMn0.PmvRyNucXrOMXcwsXIWAaK6pfia0bzEXUw53cHEhFqI';
   const ACCOUNT_ID = '0c3c69de-450c-4b76-91a7-cdc70d64ec9d';
@@ -149,7 +159,7 @@
   let selectedAddress = '';
   geocoder.on('result', e => { selectedAddress = e.result.place_name || ''; });
 
-  /* ========= Draw (with bigger vertices) ========= */
+  /* ========= Draw (larger vertices) ========= */
   if (typeof MapboxDraw === 'undefined') showErr('Draw plugin failed to load.');
   const draw = new MapboxDraw({
     displayControlsDefault:false,
@@ -168,21 +178,35 @@
   });
   map.addControl(draw);
 
-  // Disable double-tap zoom while drawing so double-tap finishes the shape
+  /* ========= Interaction state while drawing ========= */
   let drawing = false;
   map.on('draw.modechange', e => {
     drawing = (e.mode==='draw_polygon' || e.mode==='draw_line_string');
-    if (drawing) map.doubleClickZoom.disable(); else map.doubleClickZoom.enable();
+    if (drawing) {
+      map.doubleClickZoom.disable();
+      map.dragPan.disable();       // lock panning while placing vertices
+    } else {
+      map.doubleClickZoom.enable();
+      map.dragPan.enable();
+    }
   });
+
   // Double-tap/Double-click to finish
   $('map').addEventListener('dblclick', () => { if (drawing) draw.changeMode('simple_select'); }, {passive:true});
+
+  // ESC to cancel/finish drawing (keyboard)
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && drawing) {
+      draw.changeMode('simple_select');
+    }
+  });
 
   /* ========= Floating toolbar wiring ========= */
   $('fabArea').onclick = ()=> draw.changeMode('draw_polygon');
   $('fabLine').onclick = ()=> draw.changeMode('draw_line_string');
   $('fabDone').onclick = ()=> draw.changeMode('simple_select');
 
-  /* ========= Bottom buttons (mirror FAB) ========= */
+  /* ========= Bottom buttons ========= */
   $('btnPoly').onclick = ()=> draw.changeMode('draw_polygon');
   $('btnLine').onclick = ()=> draw.changeMode('draw_line_string');
   $('btnFinish').onclick = ()=> draw.changeMode('simple_select');
@@ -190,28 +214,38 @@
     const sel = draw.getSelectedIds();
     if(sel.length){ draw.trash(); }
     else { const all = draw.getAll().features; if(all.length) draw.delete(all[all.length-1].id); }
-    recalc();
+    scheduleRecalc();
   };
-  $('btnClear').onclick = ()=> { draw.deleteAll(); recalc(); };
+  $('btnClear').onclick = ()=> { draw.deleteAll(); scheduleRecalc(); };
 
   /* ========= Mode toggle + pricing ========= */
   let mode = 'lawn';
-  $('lawnBtn').onclick = ()=>{ mode='lawn'; setModeUI(); recalc(); };
-  $('snowBtn').onclick = ()=>{ mode='snow'; setModeUI(); recalc(); };
+  $('lawnBtn').onclick = ()=>{ mode='lawn'; setModeUI(); scheduleRecalc(); };
+  $('snowBtn').onclick = ()=>{ mode='snow'; setModeUI(); scheduleRecalc(); };
   function setModeUI(){
     $('lawnBtn').classList.toggle('active', mode==='lawn');
     $('snowBtn').classList.toggle('active', mode==='snow');
+    $('lawnBtn').setAttribute('aria-pressed', mode==='lawn');
+    $('snowBtn').setAttribute('aria-pressed', mode==='snow');
     $('lawnRates').style.display = mode==='lawn' ? 'flex' : 'none';
     $('snowRates').style.display = mode==='snow' ? 'flex' : 'none';
   }
 
   ['baseLawn','rateLawnSqft','rateDriveM','baseSnow','rateLotSqft','rateSidewalkM'].forEach(id=>{
-    const el=$(id); if(el) el.addEventListener('input', recalc);
+    const el=$(id); if(el) el.addEventListener('input', scheduleRecalc, {passive:true});
   });
+
   function currentRates(){
     return (mode==='lawn')
       ? { base:+$('baseLawn').value||0, ratePoly:+$('rateLawnSqft').value||0, rateLine:+$('rateDriveM').value||0 }
       : { base:+$('baseSnow').value||0, ratePoly:+$('rateLotSqft').value||0, rateLine:+$('rateSidewalkM').value||0 };
+  }
+
+  // rAF-debounced recalc for smoother drags
+  let recalcRAF = null;
+  function scheduleRecalc(){
+    if (recalcRAF) return;
+    recalcRAF = requestAnimationFrame(()=>{ recalcRAF=null; recalc(); });
   }
 
   function recalc(){
@@ -227,9 +261,9 @@
     $('lengthM').textContent  = fmt2(lengthM);
     $('quoteTotal').textContent= '$'+fmt2(total);
   }
-  map.on('draw.create', recalc);
-  map.on('draw.update', recalc);
-  map.on('draw.delete', recalc);
+  map.on('draw.create', scheduleRecalc);
+  map.on('draw.update', scheduleRecalc);
+  map.on('draw.delete', scheduleRecalc);
 
   /* ========= Save (Supabase) ========= */
   const supa = (SUPABASE_URL && SUPABASE_ANON_KEY) ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
@@ -262,7 +296,7 @@
         .select().single();
       if(propErr) throw propErr;
 
-      // 2) zones (add label column in DB if you want labels later)
+      // 2) zones
       const rows = fc.features.map(f=>{
         const isPoly = f.geometry.type==='Polygon';
         return {
@@ -296,9 +330,8 @@
         .select().single();
       if(qErr) throw qErr;
 
-      // success
       alert('Saved! Quote #' + quote.id + ' • $' + fmt2(total));
-      window.location.href = `quote-review.html?quoteId=${quote.id}`;
+      // window.location.href = `quote-review.html?quoteId=${quote.id}`;
     }catch(err){
       console.error(err);
       alert('Save failed: ' + (err?.message || err));
