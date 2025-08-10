@@ -1,378 +1,90 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html>
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-<title>Yardimo • Map Draw (Mobile-Safe v4.1)</title>
+  <meta charset="utf-8" />
+  <title>Map Test - London ON with Draw & Geocoder</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-<!-- Mapbox CSS -->
-<link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet"/>
-<link href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.5.0/mapbox-gl-draw.css" rel="stylesheet"/>
-<link href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.1/mapbox-gl-geocoder.css" rel="stylesheet"/>
+  <!-- Mapbox CSS & JS -->
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
 
-<style>
-  :root{--panel:#0f1720;--muted:#1c2633;--text:#eaf2f6;--sub:#b8c5cf;--brand:#2dd4bf;--warn:#ffd447;--danger:#f87171}
-  *{box-sizing:border-box}
-  html,body{height:100%}
-  body{margin:0;background:#0b0f14;color:var(--text);font:16px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Arial}
+  <!-- Mapbox Draw CSS & JS -->
+  <link href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.2/mapbox-gl-draw.css" rel="stylesheet" />
+  <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.2/mapbox-gl-draw.js"></script>
 
-  .wrap{max-width:1100px;margin:0 auto;padding:12px}
-  .btn{background:#16202b;border:1px solid var(--muted);color:#eaf2f6;padding:12px 14px;border-radius:12px;cursor:pointer}
-  .btn.primary{background:var(--brand);color:#05221d;border-color:transparent;font-weight:600}
-  .btn.danger{background:#2a1616;color:#fee;border-color:#512}
-  .seg{display:inline-flex;border:1px solid var(--muted);border-radius:999px;overflow:hidden}
-  .seg button{padding:10px 14px;background:transparent;border:0;color:var(--sub);cursor:pointer}
-  .seg button.active{background:var(--brand);color:#05221d}
+  <!-- Mapbox Geocoder CSS & JS -->
+  <link
+    rel="stylesheet"
+    href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.7.2/mapbox-gl-geocoder.css"
+    type="text/css"
+  />
+  <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.7.2/mapbox-gl-geocoder.min.js"></script>
 
-  /* Map + search */
-  #geocoder{position:relative; z-index:3}
-  .mapboxgl-ctrl-geocoder{min-width:260px; width:100%; max-width:600px}
-  #map{height:72vh;border:1px solid var(--muted);border-radius:16px;overflow:hidden;position:relative; z-index:1}
-  #map, .mapboxgl-canvas{touch-action:manipulation}
-
-  .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
-  .badge{border:1px solid var(--muted);padding:8px 10px;border-radius:10px;background:#0e141c;color:var(--sub)}
-  select,input{background:#0b0f14;color:#eaf2f6;border:1px solid var(--muted);border-radius:10px;padding:10px}
-
-  .list{margin-top:8px;border:1px solid var(--muted);border-radius:12px;max-height:240px;overflow:auto}
-  .list-item{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid #12202c}
-  .list-item:last-child{border-bottom:0}
-
-  .bottomBar{position:sticky;bottom:0;background:linear-gradient(180deg,rgba(15,23,32,.1),rgba(15,23,32,.9));backdrop-filter:blur(6px);padding:12px;border-top:1px solid var(--muted);border-radius:0 0 16px 16px}
-
-  /* Error ribbon */
-  #err{display:none;position:fixed;left:0;right:0;top:0;z-index:9999;background:#7f1d1d;color:#fff;padding:10px 12px;font-size:14px}
-  #ver{font-size:12px;color:#b8c5cf;margin-left:6px}
-</style>
+  <style>
+    body { margin: 0; padding: 0; }
+    #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+    .geocoder {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 1;
+      width: 300px;
+    }
+  </style>
 </head>
 <body>
-<div id="err"></div>
 
-<header>
-  <div class="wrap" style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-    <a href="index.html" class="btn" style="padding:6px 10px">🏷️ Yardimo</a>
-    <div id="ver">Map Draw v4.1 • London default</div>
-  </div>
-</header>
-
-<main class="wrap">
-  <h2>Draw & Quote</h2>
-
-  <!-- Service toggle -->
-  <div class="toolbar" style="justify-content:space-between;align-items:center">
-    <div class="seg" role="tablist" aria-label="Service type">
-      <button id="modeLawn" class="active" aria-pressed="true">Lawn Care</button>
-      <button id="modeSnow" aria-pressed="false">Snow Removal</button>
-    </div>
-    <span style="font-size:12px;color:#b8c5cf">Tap to add points. Double-tap to finish.</span>
-  </div>
-
-  <!-- Address autocomplete -->
-  <div id="geocoder" class="toolbar"></div>
-
-  <!-- Map -->
-  <div id="map"></div>
-
-  <!-- Drawing controls -->
-  <div class="toolbar" aria-label="Drawing tools" style="align-items:center">
-    <div class="seg" aria-label="Draw">
-      <button id="btnArea">Add Area</button>
-      <button id="btnEdge">Add Edge</button>
-    </div>
-    <button class="btn" id="btnUndo" title="Undo last or delete selected">Undo</button>
-    <button class="btn danger" id="btnDelete" title="Delete selected">Delete</button>
-
-    <label style="margin-left:auto;display:flex;gap:8px;align-items:center">
-      Label
-      <select id="labelSelect">
-        <option value="">(none)</option>
-        <option>Front Yard</option>
-        <option>Back Yard</option>
-        <option>Side Yard</option>
-        <option>Driveway</option>
-        <option>Walkway</option>
-        <option>Sidewalk</option>
-        <option>Parking Lot</option>
-        <option>Other</option>
-      </select>
-    </label>
-  </div>
-
-  <!-- Live metrics -->
-  <div class="toolbar" style="gap:8px">
-    <span class="badge">Area: <b id="area">0</b> sqft</span>
-    <span class="badge">Linear: <b id="linear">0</b> m</span>
-    <span class="badge">Quote: <b id="total">$0.00</b></span>
-  </div>
-
-  <!-- Pricing -->
-  <div class="toolbar" style="flex-wrap:wrap">
-    <div id="pricingLawn" style="display:flex;gap:10px;flex-wrap:wrap">
-      <label>Base $ <input id="baseLawn" type="number" step="0.01" value="15"></label>
-      <label>$ / sqft lawn <input id="rateLawnSqft" type="number" step="0.0001" value="0.008"></label>
-      <label>$ / m drive <input id="rateDriveM" type="number" step="0.01" value="0.8"></label>
-    </div>
-    <div id="pricingSnow" style="display:none;gap:10px;flex-wrap:wrap">
-      <label>Base $ <input id="baseSnow" type="number" step="0.01" value="25"></label>
-      <label>$ / sqft lot <input id="rateLotSqft" type="number" step="0.0001" value="0.010"></label>
-      <label>$ / m sidewalk <input id="rateSidewalkM" type="number" step="0.01" value="1.2"></label>
-    </div>
-  </div>
-
-  <!-- Shapes list -->
-  <div class="list" id="shapeList" aria-live="polite"></div>
-
-  <!-- Sticky bottom action -->
-  <div class="bottomBar">
-    <div style="display:flex;justify-content:flex-end">
-      <button id="saveContinue" class="btn primary">Save & Continue</button>
-    </div>
-  </div>
-</main>
-
-<!-- JS (order matters) -->
-<script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
-<script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.5.0/mapbox-gl-draw.js"></script>
-<script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.1/mapbox-gl-geocoder.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<div id="map"></div>
+<div id="geocoder" class="geocoder"></div>
 
 <script>
-/* ========== BASIC GUARDS & ERROR UI ========== */
-const showErr = (msg) => { const e=document.getElementById('err'); e.textContent = msg; e.style.display='block'; };
-window.addEventListener('error', ev => showErr('Script error: ' + (ev.message || 'unknown')));
-window.addEventListener('unhandledrejection', ev => showErr('Runtime error: ' + (ev.reason && ev.reason.message || ev.reason || 'unknown')));
+  // Your Mapbox token here
+  mapboxgl.accessToken = 'YOUR_MAPBOX_ACCESS_TOKEN';
 
-/* ========== CONFIG ========== */
-mapboxgl.accessToken = 'pk.eyJ1IjoibWlrZW5vcnJpcyIsImEiOiJjbWU0eXIyMHQwb3NlMm1wcHNkYXRwYzYxIn0.HrNdh-cFPgqR4SSYgkdHTw';
-const SUPABASE_URL = 'https://yikxwceipqtxjarcnxdr.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlpa3h3Y2VpcHF0eGphcmNueGRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ3NzkyMTIsImV4cCI6MjA3MDM1NTIxMn0.PmvRyNucXrOMXcwsXIWAaK6pfia0bzEXUw53cHEhFqI';
-const ACCOUNT_ID = '0c3c69de-450c-4b76-91a7-cdc70d64ec9d';
-const $ = id => document.getElementById(id);
-const fmt = n => (Math.round(n*100)/100).toLocaleString();
-
-/* ========== MAP ========== */
-if (!mapboxgl || !mapboxgl.Map) { showErr('Mapbox GL failed to load. Check network or CSP.'); }
-
-const map = new mapboxgl.Map({
-  container:'map',
-  style:'mapbox://styles/mapbox/satellite-streets-v12',
-  center:[-81.2497, 42.9836], // London, ON
-  zoom:16, pitch:0, bearing:0
-});
-
-map.on('error', e => console.warn('Mapbox error:', e && e.error));
-map.once('load', () => {
-  // Force London even if any old state sneaks in
-  map.jumpTo({ center:[-81.2497,42.9836], zoom:16 });
-  map.resize();
-});
-
-// kill accidental rotation on touch devices
-map.dragRotate.disable();
-map.touchZoomRotate.disableRotation();
-
-map.addControl(new mapboxgl.NavigationControl({showCompass:false}));
-map.addControl(new mapboxgl.GeolocateControl({
-  positionOptions: { enableHighAccuracy:true },
-  showUserLocation:true, trackUserLocation:false
-}));
-
-/* Address autocomplete */
-if (typeof MapboxGeocoder === 'undefined') { showErr('Geocoder failed to load.'); }
-const geocoder = new MapboxGeocoder({
-  accessToken: mapboxgl.accessToken,
-  mapboxgl, marker:false, placeholder:'Search address',
-  flyTo:{zoom:19, speed:0.8}, countries:'ca,us'
-});
-$('geocoder').appendChild(geocoder.onAdd(map));
-geocoder.on('result', e => {
-  const [lon,lat] = e.result.center; map.flyTo({center:[lon,lat], zoom:19});
-});
-
-/* ========== DRAW ========== */
-if (typeof MapboxDraw === 'undefined') { showErr('Draw plugin failed to load.'); }
-const Draw = new MapboxDraw({
-  displayControlsDefault:false,
-  controls:{},
-  styles:[
-    // polygons
-    {id:'yd-poly-fill', type:'fill', filter:['all',['==','$type','Polygon'],['!=','mode','static']], paint:{'fill-color':'#2dd4bf','fill-opacity':0.22}},
-    {id:'yd-poly-line', type:'line', filter:['all',['==','$type','Polygon'],['!=','mode','static']], paint:{'line-color':'#2dd4bf','line-width':3}},
-    // lines
-    {id:'yd-line', type:'line', filter:['all',['==','$type','LineString'],['!=','mode','static']], paint:{'line-color':'#ffd447','line-width':4}},
-    // big vertices
-    {id:'yd-pt-halo', type:'circle', filter:['all',['==','$type','Point'],['!=','meta','midpoint'],['!=','mode','static']], paint:{'circle-radius':10,'circle-color':'#000','circle-opacity':0.25}},
-    {id:'yd-pt', type:'circle', filter:['all',['==','$type','Point'],['!=','meta','midpoint'],['!=','mode','static']], paint:{'circle-radius':6,'circle-color':'#2dd4bf','circle-stroke-color':'#05221d','circle-stroke-width':2}},
-    {id:'yd-mid', type:'circle', filter:['all',['==','$type','Point'],['==','meta','midpoint']], paint:{'circle-radius':6,'circle-color':'#ffd447','circle-stroke-color':'#1c2633','circle-stroke-width':2}},
-  ]
-});
-map.addControl(Draw);
-
-// Minimal, reliable draw flow
-let DRAWING = null; // 'draw_polygon' | 'draw_line_string' | null
-const startDraw = (mode) => { DRAWING = mode; map.doubleClickZoom.disable(); Draw.changeMode(mode); };
-const finishDraw = () => { Draw.changeMode('simple_select'); DRAWING=null; map.doubleClickZoom.enable(); };
-$('btnArea').onclick = ()=> startDraw('draw_polygon');
-$('btnEdge').onclick = ()=> startDraw('draw_line_string');
-$('map').addEventListener('dblclick', ()=> { if (DRAWING) finishDraw(); }, {passive:true});
-$('btnUndo').onclick = ()=>{
-  const ids = Draw.getSelectedIds();
-  if(ids.length){ Draw.trash(); } else {
-    const all = Draw.getAll().features; if(all.length){ Draw.delete(all[all.length-1].id); }
-  }
-  recalc();
-};
-$('btnDelete').onclick = ()=>{ const s = Draw.getSelectedIds(); if(s.length){ Draw.delete(s); recalc(); } };
-
-map.on('draw.modechange', e=>{
-  DRAWING = (e.mode==='draw_polygon'||e.mode==='draw_line_string') ? e.mode : null;
-  // lock map pan/zoom while drawing, but leave two-finger pinch zoom
-  if (DRAWING){ map.dragPan.disable(); } else { map.dragPan.enable(); }
-});
-
-$('labelSelect').addEventListener('change', ()=>{
-  const sel = Draw.getSelected(); if(!sel.features.length) return;
-  const f = sel.features[0]; f.properties = f.properties||{}; f.properties.label = $('labelSelect').value || '';
-  Draw.add(f); Draw.delete(f.id); // persist props
-  recalc(); refreshList();
-});
-
-/* ========== PRICING MODE ========== */
-let MODE = 'lawn';
-function currentRates(){
-  return (MODE==='lawn')
-    ? { base:+baseLawn.value||0, ratePoly:+rateLawnSqft.value||0, rateLine:+rateDriveM.value||0 }
-    : { base:+baseSnow.value||0, ratePoly:+rateLotSqft.value||0, rateLine:+rateSidewalkM.value||0 };
-}
-$('modeLawn').onclick = ()=>{ MODE='lawn'; toggleModeUI(); recalc(); };
-$('modeSnow').onclick = ()=>{ MODE='snow'; toggleModeUI(); recalc(); };
-function toggleModeUI(){
-  $('modeLawn').classList.toggle('active', MODE==='lawn');
-  $('modeSnow').classList.toggle('active', MODE==='snow');
-  $('pricingLawn').style.display = MODE==='lawn' ? 'flex' : 'none';
-  $('pricingSnow').style.display = MODE==='snow' ? 'flex' : 'none';
-}
-
-/* ========== METRICS + LIST ========== */
-function recalc(){
-  const fc = Draw.getAll();
-  let areaSqft = 0, lineM = 0;
-  fc.features.forEach(f=>{
-    if(f.geometry.type==='Polygon'){ areaSqft += turf.area(f)*10.7639; }
-    if(f.geometry.type==='LineString'){ lineM += turf.length(f,{units:'kilometers'})*1000; }
+  // Init map in London, ON
+  const map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/mapbox/satellite-streets-v12',
+    center: [-81.2497, 42.9836],
+    zoom: 16
   });
-  const { base, ratePoly, rateLine } = currentRates();
-  const total = base + areaSqft*ratePoly + lineM*rateLine;
-  $('area').textContent = fmt(areaSqft);
-  $('linear').textContent = fmt(lineM);
-  $('total').textContent = '$' + fmt(total);
-  refreshList();
-}
-function refreshList(){
-  const list = $('shapeList'); list.innerHTML='';
-  const fc = Draw.getAll();
-  fc.features.forEach(f=>{
-    const id = f.id;
-    const isPoly = f.geometry.type==='Polygon';
-    const a = isPoly ? turf.area(f)*10.7639 : 0;
-    const m = !isPoly ? turf.length(f,{units:'kilometers'})*1000 : 0;
-    const label = (f.properties && f.properties.label) || (isPoly ? 'Area' : 'Edge');
-    const row = document.createElement('div');
-    row.className='list-item';
-    row.innerHTML = `
-      <div><b>${label}</b> • ${isPoly ? fmt(a)+' sqft' : fmt(m)+' m'}</div>
-      <div style="display:flex; gap:8px">
-        <button class="btn" data-act="select">Edit</button>
-        <button class="btn danger" data-act="trash">Remove</button>
-      </div>`;
-    row.querySelector('[data-act="select"]').onclick = ()=> {
-      Draw.changeMode('simple_select', {featureIds:[id]});
-      $('labelSelect').value = (f.properties && f.properties.label) || '';
-    };
-    row.querySelector('[data-act="trash"]').onclick = ()=> { Draw.delete(id); recalc(); };
-    list.appendChild(row);
+
+  // Add zoom/nav controls
+  map.addControl(new mapboxgl.NavigationControl());
+
+  // Add Geocoder
+  const geocoder = new MapboxGeocoder({
+    accessToken: mapboxgl.accessToken,
+    mapboxgl,
+    placeholder: 'Search address',
+    marker: false,
+    flyTo: { zoom: 19, speed: 0.8 },
+    countries: 'ca,us'
   });
-}
-map.on('draw.create', recalc);
-map.on('draw.update', recalc);
-map.on('draw.delete', recalc);
-['baseLawn','rateLawnSqft','rateDriveM','baseSnow','rateLotSqft','rateSidewalkM']
-  .forEach(id=> { const el=$(id); if(el) el.addEventListener('input', recalc); });
+  document.getElementById('geocoder').appendChild(geocoder.onAdd(map));
 
-/* ========== SAVE (Supabase) ========== */
-const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-$('saveContinue').onclick = saveQuote;
-
-async function saveQuote(){
-  const btn = $('saveContinue');
-  try{
-    if(!ACCOUNT_ID){ alert('Missing ACCOUNT_ID'); return; }
-    const addrText = (document.querySelector('.mapboxgl-ctrl-geocoder input')?.value || '').trim() || 'Unknown address';
-    const fc = Draw.getAll();
-    if(!fc.features.length){ alert('Draw at least one area or line.'); return; }
-
-    let areaSqft = 0, lineM = 0;
-    fc.features.forEach(f=>{
-      if(f.geometry.type==='Polygon'){ areaSqft += turf.area(f)*10.7639; }
-      if(f.geometry.type==='LineString'){ lineM += turf.length(f,{units:'kilometers'})*1000; }
-    });
-    const { base, ratePoly, rateLine } = currentRates();
-    const total = base + areaSqft*ratePoly + lineM*rateLine;
-
-    btn.disabled=true; btn.textContent='Saving…';
-
-    const c = map.getCenter();
-    const { data: prop, error: propErr } = await supa
-      .from('properties')
-      .insert({ account_id: ACCOUNT_ID, address: addrText, lat: c.lat, lng: c.lng })
-      .select().single();
-    if(propErr) throw propErr;
-
-    const rows = fc.features.map(f=>{
-      const isPoly = f.geometry.type==='Polygon';
-      return {
-        property_id: prop.id,
-        kind: isPoly ? (MODE==='lawn' ? 'lawn' : 'lot_snow') : (MODE==='lawn' ? 'hardscape' : 'sidewalk_snow'),
-        geojson: f,
-        area_sqft: isPoly ? turf.area(f)*10.7639 : 0,
-        length_m:  !isPoly ? turf.length(f,{units:'kilometers'})*1000 : 0,
-        label: (f.properties && f.properties.label) || null
-      };
-    });
-    if(rows.length){
-      const { error: zErr } = await supa.from('zones').insert(rows);
-      if(zErr) throw zErr;
+  // Add Draw tools
+  const draw = new MapboxDraw({
+    displayControlsDefault: false,
+    controls: {
+      polygon: true,
+      line_string: true,
+      trash: true
     }
+  });
+  map.addControl(draw);
 
-    const { data: quote, error: qErr } = await supa
-      .from('quotes')
-      .insert({
-        account_id: ACCOUNT_ID,
-        property_id: prop.id,
-        base_fee: (MODE==='lawn' ? +baseLawn.value : +baseSnow.value) || 0,
-        rate_lawn: (MODE==='lawn' ? +rateLawnSqft.value : +rateLotSqft.value) || 0,
-        rate_drive: (MODE==='lawn' ? +rateDriveM.value : +rateSidewalkM.value) || 0,
-        lawn_sqft: areaSqft,
-        drive_m: lineM,
-        total,
-        status: MODE==='snow' ? 'sent_snow' : 'sent'
-      })
-      .select().single();
-    if(qErr) throw qErr;
+  // Log features when created/updated
+  map.on('draw.create', updateFeatures);
+  map.on('draw.update', updateFeatures);
+  map.on('draw.delete', updateFeatures);
 
-    window.location.href = `quote-review.html?quoteId=${quote.id}`;
-  }catch(e){
-    console.error(e);
-    alert('Save failed: ' + (e.message || e));
-  }finally{
-    btn.disabled=false; btn.textContent='Save & Continue';
+  function updateFeatures(e) {
+    console.log('Features:', draw.getAll());
   }
-}
-
-/* ========== FINAL: ensure this file is live ========== */
-// quick tell: version badge should show "v4.1 • London default"
-// if not, you're seeing a cached or different file. Try map-draw.html?v=41
 </script>
+
 </body>
 </html>
+
