@@ -11,52 +11,70 @@
 </style>
 </head>
 <body>
-<header><div class="wrap nav">
-  <a href="index.html" class="btn" style="padding:6px 10px">🏷️ Yardimo</a>
-  <nav><a href="index.html" style="color:#fff">Quotes</a><a href="jobs.html">Jobs</a><a href="crew.html">Crew</a><a href="customers.html">Customers</a><a href="pricing.html">Pricing</a><a href="settings.html">Settings</a></nav>
-</div></header>
+<header>
+  <div class="wrap nav">
+    <a href="index.html" class="btn" style="padding:6px 10px">🏷️ Yardimo</a>
+    <nav>
+      <a href="index.html" style="color:#fff">Quotes</a>
+      <a href="jobs.html">Jobs</a>
+      <a href="crew.html">Crew</a>
+      <a href="customers.html">Customers</a>
+      <a href="pricing.html">Pricing</a>
+      <a href="settings.html">Settings</a>
+    </nav>
+  </div>
+</header>
 
 <main class="wrap">
-<section class="panel">
-  <h2>Draw & Quote</h2>
-  <div id="bar">
-    <input id="addr" placeholder="Enter address"/>
-    <button class="btn" id="find">Find</button>
-    <button class="btn" id="clear">Clear</button>
-  </div>
-  <div id="map"></div>
-  <div class="row" style="margin-top:10px">
-    <span class="badge">Lawn: <b id="lawn">0</b> sqft</span>
-    <span class="badge">Hardscape: <b id="drive">0</b> m</span>
-    <span class="badge">Quote: <b id="total">$0.00</b></span>
-  </div>
-  <div class="row" style="margin-top:8px">
-    <label>Base $ <input id="base" class="input" type="number" step="0.01" value="15"></label>
-    <label>$ / sqft lawn <input id="rateLawn" class="input" type="number" step="0.0001" value="0.008"></label>
-    <label>$ / m drive <input id="rateDrive" class="input" type="number" step="0.01" value="0.8"></label>
-    <button class="btn" id="snapshot">Snapshot URL</button>
-    <small id="snapurl" class="note"></small>
-  </div>
-  <div class="row" style="margin-top:8px">
-    <button class="btn primary" onclick="window.location.href='quote-review.html'">Continue</button>
-  </div>
-</section>
+  <section class="panel">
+    <h2>Draw & Quote</h2>
+    <div id="bar">
+      <input id="addr" placeholder="Enter address"/>
+      <button class="btn" id="find">Find</button>
+      <button class="btn" id="clear">Clear</button>
+    </div>
+    <div id="map"></div>
+    <div class="row" style="margin-top:10px">
+      <span class="badge">Lawn: <b id="lawn">0</b> sqft</span>
+      <span class="badge">Hardscape: <b id="drive">0</b> m</span>
+      <span class="badge">Quote: <b id="total">$0.00</b></span>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <label>Base $ <input id="base" class="input" type="number" step="0.01" value="15"></label>
+      <label>$ / sqft lawn <input id="rateLawn" class="input" type="number" step="0.0001" value="0.008"></label>
+      <label>$ / m drive <input id="rateDrive" class="input" type="number" step="0.01" value="0.8"></label>
+      <button class="btn" id="snapshot">Snapshot URL</button>
+      <small id="snapurl" class="note"></small>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button class="btn primary" onclick="window.location.href='quote-review.html'">Continue</button>
+    </div>
+  </section>
 </main>
 
 <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
 <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.5.0/mapbox-gl-draw.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+<!-- Supabase SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
-  // 1) MAPBOX (public token is okay)
-  mapboxgl.accessToken = 'pk.eyJ1IjoibWlrZW5vcnJpcyIsImEiOiJjbWU0eXIyMHQwb3NlMm1wcHNkYXRwYzYxIn0.HrNdh-cFPgqR4SSYgkdHTw';
+  /* ======================
+     1) CONFIG (EDIT THESE)
+     ====================== */
+  mapboxgl.accessToken = 'pk.eyJ1IjoibWlrZW5vcnJpcyIsImEiOiJjbWU0eXIyMHQwb3NlMm1wcHNkYXRwYzYxIn0.HrNdh-cFPgqR4SSYgkdHTw';              // pk.xxxxxx
+  const SUPABASE_URL = 'https://yikxwceipqtxjarcnxdr.supabase.co';                // https://xxxx.supabase.co
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlpa3h3Y2VpcHF0eGphcmNueGRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ3NzkyMTIsImV4cCI6MjA3MDM1NTIxMn0.PmvRyNucXrOMXcwsXIWAaK6pfia0bzEXUw53cHEhFqI';      // anon key ONLY
+  const ACCOUNT_ID = '0c3c69de-450c-4b76-91a7-cdc70d64ec9d';                  // from accounts table
 
+  /* ==============
+     2) MAP SETUP
+     ============== */
   const map = new mapboxgl.Map({
     container:'map',
     style:'mapbox://styles/mapbox/satellite-streets-v12',
     center:[-79.3832,43.6532], zoom:15
   });
-
   const Draw = new MapboxDraw({
     displayControlsDefault:false,
     controls:{ polygon:true, line_string:true, trash:true },
@@ -68,6 +86,7 @@
   });
   map.addControl(Draw);
   map.addControl(new mapboxgl.NavigationControl());
+  map.on('error', e => console.error('Mapbox error:', e?.error));
 
   const $ = (id)=>document.getElementById(id);
   const fmt = (n)=> (Math.round(n*100)/100).toLocaleString();
@@ -100,9 +119,78 @@
     $('snapurl').textContent = url;
   };
 
-  // 2) SUPABASE (fill these with correct values later)
-  window.SUPABASE_URL = 'https://yikxwceipqtxjarcnxdr.supabase.co';  // <-- replace with your real Project URL
-  window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlpa3h3Y2VpcHF0eGphcmNueGRyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDc3OTIxMiwiZXhwIjoyMDcwMzU1MjEyfQ.GekRPSlMoByMCchNwVXJiZ2nyYRQmrMwVI8ODapnra0';                 // <-- replace with your anon key (NOT service_role)
+  /* ==================
+     3) SUPABASE SAVE
+     ================== */
+  const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // Inject "Save Quote" button next to Continue
+  (function injectSaveBtn(){
+    const rows = document.querySelectorAll('.row');
+    const actions = rows[rows.length - 1];
+    const save = document.createElement('button');
+    save.className = 'btn';
+    save.textContent = 'Save Quote';
+    save.onclick = saveQuote;
+    actions.prepend(save);
+  })();
+
+  async function saveQuote(){
+    try{
+      const addr = $('addr').value || 'Unknown address';
+      const base = +$('base').value||0;
+      const rL   = +$('rateLawn').value||0;
+      const rD   = +$('rateDrive').value||0;
+
+      const fc = Draw.getAll();
+      if(!fc.features.length) { alert('Draw at least one area or line.'); return; }
+
+      let lawnSqft = 0, driveM = 0;
+      const zoneRows = fc.features.map(f=>{
+        let kind='lawn', area_sqft=0, length_m=0;
+        if(f.geometry.type==='Polygon'){ area_sqft = turf.area(f)*10.7639; }
+        else if(f.geometry.type==='LineString'){ kind='hardscape'; length_m = turf.length(f,{units:'kilometers'})*1000; }
+        lawnSqft += area_sqft; driveM += length_m;
+        return { kind, geojson:f, area_sqft, length_m };
+      });
+      const total = base + lawnSqft*rL + driveM*rD;
+
+      // 1) property
+      const center = map.getCenter();
+      const { data: prop, error: propErr } = await supa
+        .from('properties')
+        .insert({ account_id: ACCOUNT_ID, address: addr, lat: center.lat, lng: center.lng })
+        .select()
+        .single();
+      if(propErr) throw propErr;
+
+      // 2) zones
+      if(zoneRows.length){
+        const rows = zoneRows.map(z => ({...z, property_id: prop.id}));
+        const { error: zErr } = await supa.from('zones').insert(rows);
+        if(zErr) throw zErr;
+      }
+
+      // 3) quote
+      const { data: quote, error: qErr } = await supa
+        .from('quotes')
+        .insert({
+          account_id: ACCOUNT_ID,
+          property_id: prop.id,
+          base_fee: base, rate_lawn: rL, rate_drive: rD,
+          lawn_sqft: lawnSqft, drive_m: driveM, total, status:'sent'
+        })
+        .select()
+        .single();
+      if(qErr) throw qErr;
+
+      // 4) go to review
+      window.location.href = `quote-review.html?quoteId=${quote.id}`;
+    }catch(e){
+      console.error('Save Quote failed:', e);
+      alert('Save failed: ' + (e.message || e));
+    }
+  }
 
   recalc();
 </script>
