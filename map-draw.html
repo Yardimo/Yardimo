@@ -1,33 +1,64 @@
-<!doctype html><html><head>
-<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Yardimo • Map Draw</title>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>Yardimo • Map Draw (Mobile‑First v3)</title>
 <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet"/>
 <link href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.5.0/mapbox-gl-draw.css" rel="stylesheet"/>
 <link href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.1/mapbox-gl-geocoder.css" rel="stylesheet"/>
-<link rel="stylesheet" href="styles.css"/>
 <style>
-  :root{--panel:#0f1720;--muted:#1c2633;--text:#eaf2f6;--sub:#b8c5cf;--brand:#2dd4bf;--warn:#ffd447}
-  body{background:#0b0f14;color:var(--text)}
-  #map{height:65vh;border:1px solid var(--muted);border-radius:12px;overflow:hidden}
-  .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
-  .toolbar .btn{padding:10px 14px}
+  :root{--panel:#0f1720;--muted:#1c2633;--text:#eaf2f6;--sub:#b8c5cf;--brand:#2dd4bf;--warn:#ffd447;--danger:#f87171}
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:#0b0f14;color:var(--text);font:16px/1.4 system-ui, -apple-system, Segoe UI, Roboto, sans-serif}
+  a,button,input,select{font:inherit}
+  .wrap{max-width:1100px;margin:0 auto;padding:12px}
+  header .nav{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  header nav a{color:var(--sub);text-decoration:none;margin-left:10px}
+  .btn{background:#16202b;border:1px solid var(--muted);color:var(--text);padding:12px 14px;border-radius:12px;cursor:pointer}
+  .btn.primary{background:var(--brand);color:#05221d;border-color:transparent;font-weight:600}
+  .btn.danger{background:#2a1616;color:#fee;border-color:#512}
+  .btn:active{transform:translateY(1px)}
   .seg{display:inline-flex;border:1px solid var(--muted);border-radius:999px;overflow:hidden}
-  .seg button{padding:10px 14px;background:#0b0f14;border:0;color:var(--sub);cursor:pointer}
-  .seg button.active{background:var(--brand);color:#04231f}
+  .seg button{padding:10px 14px;background:transparent;border:0;color:var(--sub);cursor:pointer}
+  .seg button.active{background:var(--brand);color:#05221d}
+
+  /* Map area */
+  #map{height:65vh;border:1px solid var(--muted);border-radius:16px;overflow:hidden;position:relative}
+  /* Improve touch gestures: allow taps for vertices without scrolling the page while drawing */
+  #map, .mapboxgl-canvas{touch-action:manipulation}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
   .stack{display:grid;gap:8px}
-  .list{margin-top:8px;border:1px solid var(--muted);border-radius:10px;max-height:180px;overflow:auto}
-  .list-item{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid #12202c}
+  .list{margin-top:8px;border:1px solid var(--muted);border-radius:12px;max-height:220px;overflow:auto}
+  .list-item{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid #12202c}
   .list-item:last-child{border-bottom:0}
-  .list-item button{padding:4px 8px}
-  .bottomBar{position:sticky;bottom:0;background:linear-gradient(180deg,rgba(15,23,32,.1),rgba(15,23,32,.9));backdrop-filter:blur(6px);padding:12px;border-top:1px solid var(--muted)}
-  .metrics{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
-  .metrics .badge{font-size:15px}
-  select,input{background:#0b0f14;color:var(--text);border:1px solid var(--muted);border-radius:8px;padding:8px}
-  @media(max-width:980px){
-    #map{height:70vh}
-    .toolbar{gap:6px}
-  }
+  .badge{border:1px solid var(--muted);padding:8px 10px;border-radius:10px;background:#0e141c;color:var(--sub)}
   .hint{font-size:12px;color:var(--sub);margin-left:8px}
+
+  /* Floating draw HUD for mobile */
+  .draw-hud{position:fixed;left:0;right:0;bottom:0;z-index:10;padding:10px;display:none}
+  .draw-hud .box{max-width:700px;margin:0 auto;background:rgba(11,15,20,.9);border:1px solid var(--muted);backdrop-filter:blur(6px);border-radius:16px;padding:10px;display:flex;align-items:center;gap:8px}
+  .draw-hud .box .meta{flex:1;color:var(--sub);font-size:14px}
+  .draw-hud .box .meta b{color:var(--text)}
+  .draw-hud .box .actions{display:flex;gap:8px}
+  .draw-hud .ghost{font-size:12px;color:var(--sub)}
+
+  /* Big thumb‑friendly controls */
+  .thumb-row{display:flex;gap:8px}
+  .thumb-row .btn{padding:14px 16px;min-width:44px;min-height:44px}
+
+  select,input{background:#0b0f14;color:var(--text);border:1px solid var(--muted);border-radius:10px;padding:10px}
+
+  .bottomBar{position:sticky;bottom:0;background:linear-gradient(180deg,rgba(15,23,32,.1),rgba(15,23,32,.9));backdrop-filter:blur(6px);padding:12px;border-top:1px solid var(--muted);border-radius:0 0 16px 16px}
+
+  /* Mobile tweaks */
+  @media (max-width:980px){
+    #map{height:72vh}
+    .hint{display:none}
+    .wrap{padding:10px}
+    header nav{display:none}
+  }
 </style>
 </head>
 <body>
@@ -55,7 +86,7 @@
         <button id="modeLawn" class="active" aria-pressed="true">Lawn Care</button>
         <button id="modeSnow" aria-pressed="false">Snow Removal</button>
       </div>
-      <span class="hint">Polygon = areas (front/back yards, lots). Line = edges/sidewalks. Tap <b>Finish</b> to confirm.</span>
+      <span class="hint">Tap to add points. Use <b>Finish</b> below to close shape.</span>
     </div>
 
     <!-- Address autocomplete -->
@@ -65,16 +96,14 @@
     <div id="map"></div>
 
     <!-- Drawing controls -->
-    <div class="toolbar">
+    <div class="toolbar thumb-row" aria-label="Drawing tools">
       <div class="seg" aria-label="Draw">
         <button id="btnArea">Add Area</button>
         <button id="btnEdge">Add Edge</button>
       </div>
-      <button class="btn" id="btnFinish">Finish</button>
-      <button class="btn" id="btnUndo">Undo</button>
-      <button class="btn" id="btnDelete">Delete</button>
-
-      <label style="margin-left:auto;display:flex;gap:6px;align-items:center">
+      <button class="btn" id="btnUndo" title="Undo last or delete selected">Undo</button>
+      <button class="btn danger" id="btnDelete" title="Delete selected">Delete</button>
+      <label style="margin-left:auto;display:flex;gap:8px;align-items:center">
         Label
         <select id="labelSelect">
           <option value="">(none)</option>
@@ -91,7 +120,7 @@
     </div>
 
     <!-- Live metrics -->
-    <div class="metrics">
+    <div class="metrics thumb-row">
       <span class="badge">Area: <b id="area">0</b> sqft</span>
       <span class="badge">Linear: <b id="linear">0</b> m</span>
       <span class="badge">Quote: <b id="total">$0.00</b></span>
@@ -116,16 +145,30 @@
     </div>
 
     <!-- Shapes list -->
-    <div class="list" id="shapeList"></div>
+    <div class="list" id="shapeList" aria-live="polite"></div>
 
     <!-- Sticky bottom action -->
     <div class="bottomBar">
       <div class="row" style="justify-content:flex-end">
-        <button id="saveContinue" class="btn primary" onclick="saveQuote()">Save & Continue</button>
+        <button id="saveContinue" class="btn primary">Save & Continue</button>
       </div>
     </div>
   </section>
 </main>
+
+<!-- Floating Draw HUD (mobile first) -->
+<div class="draw-hud" id="drawHud" aria-live="polite">
+  <div class="box">
+    <div class="meta">
+      <div><b id="hudMode">Drawing…</b> <span class="ghost" id="hudHint">Tap to add points.</span></div>
+      <div class="ghost">Pts: <span id="hudPts">0</span> • <span id="hudMeasure">0</span></div>
+    </div>
+    <div class="actions">
+      <button class="btn" id="btnFinish">Finish</button>
+      <button class="btn danger" id="btnCancel">Cancel</button>
+    </div>
+  </div>
+</div>
 
 <!-- Libraries -->
 <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
@@ -133,75 +176,216 @@
 <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.1/mapbox-gl-geocoder.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
 <script>
-  /* ===== CONFIG (use your real values) ===== */
-mapboxgl.accessToken = 'pk.eyJ1IjoibWlrZW5vcnJpcyIsImEiOiJjbWU0eXIyMHQwb3NlMm1wcHNkYXRwYzYxIn0.HrNdh-cFPgqR4SSYgkdHTw';              // pk.xxxxxx
-  const SUPABASE_URL = 'https://yikxwceipqtxjarcnxdr.supabase.co';                // https://xxxx.supabase.co
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlpa3h3Y2VpcHF0eGphcmNueGRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ3NzkyMTIsImV4cCI6MjA3MDM1NTIxMn0.PmvRyNucXrOMXcwsXIWAaK6pfia0bzEXUw53cHEhFqI';      // anon key ONLY
-  const ACCOUNT_ID = '0c3c69de-450c-4b76-91a7-cdc70d64ec9d';                  // from accounts table
+/* ===== CONFIG (use your real values) ===== */
+mapboxgl.accessToken = 'pk.eyJ1IjoibWlrZW5vcnJpcyIsImEiOiJjbWU0eXIyMHQwb3NlMm1wcHNkYXRwYzYxIn0.HrNdh-cFPgqR4SSYgkdHTw';
+const SUPABASE_URL = 'https://yikxwceipqtxjarcnxdr.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlpa3h3Y2VpcHF0eGphcmNueGRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ3NzkyMTIsImV4cCI6MjA3MDM1NTIxMn0.PmvRyNucXrOMXcwsXIWAaK6pfia0bzEXUw53cHEhFqI';
+const ACCOUNT_ID = '0c3c69de-450c-4b76-91a7-cdc70d64ec9d';
 
-  /* ===== MAP + CONTROLS ===== */
-  const map = new mapboxgl.Map({
-    container:'map',
-    style:'mapbox://styles/mapbox/satellite-streets-v12',
-    center:[-79.3832,43.6532], zoom:15
-  });
+/* ===== UTIL ===== */
+const $ = id => document.getElementById(id);
+const fmt = n => (Math.round(n*100)/100).toLocaleString();
+const vib = ms => ('vibrate' in navigator) && navigator.vibrate(ms);
 
-  // Geocoder (autocomplete)
-  const geocoder = new MapboxGeocoder({ accessToken: mapboxgl.accessToken, mapboxgl, marker:false, placeholder:'Search address' });
-  document.getElementById('geocoder').appendChild(geocoder.onAdd(map));
+/* ===== MAP + CONTROLS ===== */
+const map = new mapboxgl.Map({
+  container:'map',
+  style:'mapbox://styles/mapbox/satellite-streets-v12',
+  center:[-79.3832,43.6532], zoom:16, pitch:0, bearing:0
+});
+map.addControl(new mapboxgl.NavigationControl({showCompass:false}));
 
-  const Draw = new MapboxDraw({
-    displayControlsDefault:false,
-    controls:{ polygon:false, line_string:false, trash:false },
-    styles:[
-      {id:'gl-draw-polygon-fill',type:'fill',filter:['all',['==','$type','Polygon'],['!=','mode','static']],paint:{'fill-color':'#2dd4bf','fill-opacity':0.2}},
-      {id:'gl-draw-polygon-stroke-active',type:'line',filter:['all',['==','$type','Polygon'],['!=','mode','static']],paint:{'line-color':'#2dd4bf','line-width':2}},
-      {id:'gl-draw-line',type:'line',filter:['all',['==','$type','LineString'],['!=','mode','static']],paint:{'line-color':'#ffd447','line-width':3}}
-    ]
-  });
-  map.addControl(Draw);
-  map.addControl(new mapboxgl.NavigationControl());
-  map.on('error', e => console.error('Mapbox error:', e?.error));
+// Geocoder (autocomplete) with nicer UX
+const geocoder = new MapboxGeocoder({
+  accessToken: mapboxgl.accessToken,
+  mapboxgl, marker:false, placeholder:'Search address',
+  flyTo: {zoom:19, speed:0.8},
+  countries:'ca,us'
+});
+$('geocoder').appendChild(geocoder.onAdd(map));
 
-  // Mode & rates
-  let MODE = 'lawn'; // 'lawn' | 'snow'
-  function currentRates(){
-    return (MODE==='lawn')
-      ? { base:+baseLawn.value||0, ratePoly:+rateLawnSqft.value||0, rateLine:+rateDriveM.value||0 }
-      : { base:+baseSnow.value||0, ratePoly:+rateLotSqft.value||0, rateLine:+rateSidewalkM.value||0 };
+const Draw = new MapboxDraw({
+  displayControlsDefault:false,
+  controls:{ polygon:false, line_string:false, trash:false },
+  styles:[
+    {id:'gl-draw-polygon-fill',type:'fill',filter:['all',['==','$type','Polygon'],['!=','mode','static']],paint:{'fill-color':'#2dd4bf','fill-opacity':0.22}},
+    {id:'gl-draw-polygon-stroke-active',type:'line',filter:['all',['==','$type','Polygon'],['!=','mode','static']],paint:{'line-color':'#2dd4bf','line-width':3}},
+    {id:'gl-draw-line',type:'line',filter:['all',['==','$type','LineString'],['!=','mode','static']],paint:{'line-color':'#ffd447','line-width':4}}
+  ]
+});
+map.addControl(Draw);
+
+// Prevent accidental map gestures while drawing
+function setMapGestures(enabled){
+  map[enabled?'dragPan.enable':'dragPan.disable']();
+  map[enabled?'scrollZoom.enable':'scrollZoom.disable']();
+  map[enabled?'boxZoom.enable':'boxZoom.disable']();
+  map[enabled?'dragRotate.enable':'dragRotate.disable']();
+  map[enabled?'keyboard.enable':'keyboard.disable']();
+  map[enabled?'doubleClickZoom.enable':'doubleClickZoom.disable']();
+}
+
+/* ===== MODE & RATES ===== */
+let MODE = 'lawn'; // 'lawn' | 'snow'
+function currentRates(){
+  return (MODE==='lawn')
+    ? { base:+baseLawn.value||0, ratePoly:+rateLawnSqft.value||0, rateLine:+rateDriveM.value||0 }
+    : { base:+baseSnow.value||0, ratePoly:+rateLotSqft.value||0, rateLine:+rateSidewalkM.value||0 };
+}
+$('modeLawn').onclick = ()=>{ MODE='lawn'; toggleModeUI(); recalc(); };
+$('modeSnow').onclick = ()=>{ MODE='snow'; toggleModeUI(); recalc(); };
+function toggleModeUI(){
+  $('modeLawn').classList.toggle('active', MODE==='lawn');
+  $('modeSnow').classList.toggle('active', MODE==='snow');
+  $('pricingLawn').style.display = MODE==='lawn' ? 'grid' : 'none';
+  $('pricingSnow').style.display = MODE==='snow' ? 'grid' : 'none';
+}
+
+/* ===== DRAW TRIGGERS ===== */
+$('btnArea').onclick = ()=> startDraw('polygon');
+$('btnEdge').onclick = ()=> startDraw('line_string');
+$('btnFinish').onclick = ()=> finishDraw();
+$('btnCancel').onclick = ()=> cancelDraw();
+$('btnUndo').onclick = ()=>{
+  const ids = Draw.getSelectedIds();
+  if(ids.length){ Draw.trash(); } else {
+    const all = Draw.getAll().features; if(all.length){ Draw.delete(all[all.length-1].id);} }
+  recalc();
+};
+$('btnDelete').onclick = ()=>{ const s=Draw.getSelectedIds(); if(s.length){ Draw.delete(s); recalc(); } };
+
+function startDraw(kind){
+  Draw.changeMode(kind==='polygon'?'draw_polygon':'draw_line_string');
+}
+
+function finishDraw(){
+  // Exit back to select mode (this closes polygon/line in Mapbox Draw)
+  Draw.changeMode('simple_select');
+  setDrawingHUD(false);
+  setMapGestures(true);
+  vib(10);
+}
+function cancelDraw(){
+  // Mapbox Draw has no explicit cancel; switch mode and delete the last temp feature if it has 0 vertices
+  const all = Draw.getAll();
+  // heuristic: delete last feature if it has < 3 coords for polygon or < 2 for line
+  const last = all.features[all.features.length-1];
+  if(last){
+    const t = last.geometry.type;
+    const coords = t==='Polygon' ? last.geometry.coordinates?.[0]||[] : last.geometry.coordinates||[];
+    const min = t==='Polygon'?3:2;
+    if(coords.length < min){ Draw.delete(last.id); }
   }
+  Draw.changeMode('simple_select');
+  setDrawingHUD(false);
+  setMapGestures(true);
+}
 
-  // Buttons
-  const $ = id => document.getElementById(id);
-  $('modeLawn').onclick = ()=>{ MODE='lawn'; $('modeLawn').classList.add('active'); $('modeSnow').classList.remove('active'); $('pricingLawn').style.display='grid'; $('pricingSnow').style.display='none'; recalc(); };
-  $('modeSnow').onclick = ()=>{ MODE='snow'; $('modeSnow').classList.add('active'); $('modeLawn').classList.remove('active'); $('pricingLawn').style.display='none'; $('pricingSnow').style.display='grid'; recalc(); };
-  $('btnArea').onclick = ()=> Draw.changeMode('draw_polygon');
-  $('btnEdge').onclick = ()=> Draw.changeMode('draw_line_string');
-  $('btnFinish').onclick = ()=> Draw.changeMode('simple_select');
-  $('btnUndo').onclick = ()=> { const s = Draw.getSelectedIds(); if(s.length){ Draw.trash(); } else { const all = Draw.getAll().features; if(all.length){ Draw.delete(all[all.length-1].id);} } recalc(); };
-  $('btnDelete').onclick = ()=> { const s = Draw.getSelectedIds(); if(s.length){ Draw.delete(s); } recalc(); };
+// HUD + gesture lock while actively drawing
+function setDrawingHUD(active, label){
+  $('drawHud').style.display = active ? 'block' : 'none';
+  if(active){ $('hudMode').textContent = label||'Drawing…'; }
+}
 
-  // Label selected feature
-  $('labelSelect').addEventListener('change', ()=>{
-    const sel = Draw.getSelected(); if(!sel.features.length) return;
-    const f = sel.features[0]; f.properties = f.properties || {}; f.properties.label = $('labelSelect').value || '';
-    Draw.add(f); Draw.delete(f.id); // replace to persist prop
-    recalc(); refreshList();
+map.on('draw.modechange', e=>{
+  const m = e.mode;
+  const drawing = m==='draw_polygon' || m==='draw_line_string';
+  setDrawingHUD(drawing, m==='draw_polygon' ? 'Drawing Area' : 'Drawing Edge');
+  setMapGestures(!drawing);
+  if(drawing){ $('hudHint').textContent = 'Tap to add points · Use Finish to close'; }
+});
+
+// Update HUD vertex count + measure while drawing
+map.on('mousemove', updateHUD);
+map.on('click', updateHUD);
+function updateHUD(){
+  const sel = Draw.getSelected();
+  const mode = Draw.getMode ? Draw.getMode() : null;
+  const drawing = mode==='draw_polygon' || mode==='draw_line_string';
+  if(!drawing){ return; }
+  const fc = Draw.getAll();
+  const last = fc.features[fc.features.length-1];
+  if(!last){ return; }
+  const isPoly = last.geometry.type==='Polygon';
+  const coords = isPoly ? (last.geometry.coordinates?.[0]||[]) : (last.geometry.coordinates||[]);
+  $('hudPts').textContent = coords.length;
+  let measure = 0;
+  if(isPoly){ measure = turf.area(last)*10.7639; $('hudMeasure').textContent = fmt(measure)+ ' sqft'; }
+  else { measure = turf.length(last,{units:'kilometers'})*1000; $('hudMeasure').textContent = fmt(measure)+ ' m'; }
+}
+
+/* ===== LABEL SELECTED FEATURE ===== */
+$('labelSelect').addEventListener('change', ()=>{
+  const sel = Draw.getSelected(); if(!sel.features.length) return;
+  const f = sel.features[0]; f.properties = f.properties || {}; f.properties.label = $('labelSelect').value || '';
+  // Replace feature to persist props
+  Draw.add(f); Draw.delete(f.id);
+  recalc(); refreshList();
+});
+
+/* ===== FLY ON GEOCODER ===== */
+geocoder.on('result', e => {
+  const [lon,lat] = e.result.center; map.flyTo({center:[lon,lat], zoom:19});
+});
+
+/* ===== CALC & LIST ===== */
+function recalc(){
+  const fc = Draw.getAll();
+  let areaSqft = 0, lineM = 0;
+  fc.features.forEach(f=>{
+    if(f.geometry.type==='Polygon'){ areaSqft += turf.area(f)*10.7639; }
+    if(f.geometry.type==='LineString'){ lineM += turf.length(f,{units:'kilometers'})*1000; }
   });
+  const { base, ratePoly, rateLine } = currentRates();
+  const total = base + areaSqft*ratePoly + lineM*rateLine;
+  $('area').textContent = fmt(areaSqft);
+  $('linear').textContent = fmt(lineM);
+  $('total').textContent = '$' + fmt(total);
+  refreshList();
+}
 
-  // Geocoder fly
-  geocoder.on('result', e => {
-    const [lon,lat] = e.result.center;
-    map.flyTo({center:[lon,lat],zoom:19});
+function refreshList(){
+  const list = $('shapeList'); list.innerHTML = '';
+  const fc = Draw.getAll();
+  fc.features.forEach(f=>{
+    const id = f.id; const isPoly = f.geometry.type==='Polygon';
+    const a = isPoly ? turf.area(f)*10.7639 : 0;
+    const m = !isPoly ? turf.length(f,{units:'kilometers'})*1000 : 0;
+    const label = (f.properties && f.properties.label) || (isPoly ? 'Area' : 'Edge');
+    const row = document.createElement('div');
+    row.className='list-item';
+    row.innerHTML = `
+      <div><b>${label}</b> • ${isPoly ? fmt(a)+' sqft' : fmt(m)+' m'}</div>
+      <div class="thumb-row">
+        <button class="btn" data-act="select">Edit</button>
+        <button class="btn danger" data-act="trash">Remove</button>
+      </div>`;
+    row.querySelector('[data-act="select"]').onclick = ()=>{ Draw.changeMode('simple_select', {featureIds:[id]}); $('labelSelect').value = (f.properties && f.properties.label) || ''; };
+    row.querySelector('[data-act="trash"]').onclick = ()=>{ Draw.delete(id); recalc(); };
+    list.appendChild(row);
   });
+}
 
-  /* ===== CALC & LIST ===== */
-  function fmt(n){ return (Math.round(n*100)/100).toLocaleString(); }
+map.on('draw.create', ()=>{ recalc(); vib(10); });
+map.on('draw.update', recalc);
+map.on('draw.delete', recalc);
+['baseLawn','rateLawnSqft','rateDriveM','baseSnow','rateLotSqft','rateSidewalkM'].forEach(id=>{
+  const el=$(id); if(el) el.addEventListener('input', recalc);
+});
 
-  function recalc(){
+/* ===== SUPABASE SAVE ===== */
+const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+$('saveContinue').onclick = saveQuote;
+
+async function saveQuote(){
+  const btn = $('saveContinue');
+  try{
+    if(!ACCOUNT_ID){ alert('Missing ACCOUNT_ID'); return; }
+    const addrText = (document.querySelector('.mapboxgl-ctrl-geocoder input')?.value || '').trim() || 'Unknown address';
     const fc = Draw.getAll();
+    if(!fc.features.length){ alert('Draw at least one area or line.'); return; }
+    // totals
     let areaSqft = 0, lineM = 0;
     fc.features.forEach(f=>{
       if(f.geometry.type==='Polygon'){ areaSqft += turf.area(f)*10.7639; }
@@ -209,122 +393,61 @@ mapboxgl.accessToken = 'pk.eyJ1IjoibWlrZW5vcnJpcyIsImEiOiJjbWU0eXIyMHQwb3NlMm1wc
     });
     const { base, ratePoly, rateLine } = currentRates();
     const total = base + areaSqft*ratePoly + lineM*rateLine;
-    $('area').textContent = fmt(areaSqft);
-    $('linear').textContent = fmt(lineM);
-    $('total').textContent = '$' + fmt(total);
-    refreshList();
-  }
+    btn.disabled = true; btn.textContent = 'Saving…';
 
-  function refreshList(){
-    const list = $('shapeList'); list.innerHTML = '';
-    const fc = Draw.getAll();
-    fc.features.forEach(f=>{
-      const id = f.id;
+    // 1) property
+    const c = map.getCenter();
+    const { data: prop, error: propErr } = await supa
+      .from('properties')
+      .insert({ account_id: ACCOUNT_ID, address: addrText, lat: c.lat, lng: c.lng })
+      .select().single();
+    if(propErr) throw propErr;
+
+    // 2) zones (preserve label)
+    const rows = fc.features.map(f=>{
       const isPoly = f.geometry.type==='Polygon';
-      const a = isPoly ? turf.area(f)*10.7639 : 0;
-      const m = !isPoly ? turf.length(f,{units:'kilometers'})*1000 : 0;
-      const label = (f.properties && f.properties.label) || (isPoly ? 'Area' : 'Edge');
-      const row = document.createElement('div');
-      row.className='list-item';
-      row.innerHTML = `
-        <div><b>${label}</b> • ${isPoly ? fmt(a)+' sqft' : fmt(m)+' m'}</div>
-        <div>
-          <button class="btn" data-act="select">Edit</button>
-          <button class="btn" data-act="trash">Remove</button>
-        </div>`;
-      row.querySelector('[data-act="select"]').onclick = ()=> { Draw.changeMode('simple_select', {featureIds:[id]}); $('labelSelect').value = (f.properties && f.properties.label) || ''; };
-      row.querySelector('[data-act="trash"]').onclick = ()=> { Draw.delete(id); recalc(); };
-      list.appendChild(row);
+      return {
+        property_id: prop.id,
+        kind: isPoly ? (MODE==='lawn' ? 'lawn' : 'lot_snow') : (MODE==='lawn' ? 'hardscape' : 'sidewalk_snow'),
+        geojson: f,
+        area_sqft: isPoly ? turf.area(f)*10.7639 : 0,
+        length_m:  !isPoly ? turf.length(f,{units:'kilometers'})*1000 : 0,
+        label: (f.properties && f.properties.label) || null
+      };
     });
-  }
 
-  map.on('draw.create', recalc);
-  map.on('draw.update', recalc);
-  map.on('draw.delete', recalc);
-  ['baseLawn','rateLawnSqft','rateDriveM','baseSnow','rateLotSqft','rateSidewalkM'].forEach(id=>{
-    const el=$(id); if(el) el.addEventListener('input', recalc);
-  });
-
-  /* ===== SUPABASE SAVE ===== */
-  const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-  async function saveQuote(){
-    const btn = $('saveContinue') || {disabled:false, textContent:''};
-    try{
-      if(!ACCOUNT_ID){ alert('Missing ACCOUNT_ID'); return; }
-      const addrText = (document.querySelector('.mapboxgl-ctrl-geocoder input')?.value || '').trim() || 'Unknown address';
-
-      const fc = Draw.getAll();
-      if(!fc.features.length){ alert('Draw at least one area or line.'); return; }
-
-      // totals
-      let areaSqft = 0, lineM = 0;
-      fc.features.forEach(f=>{
-        if(f.geometry.type==='Polygon'){ areaSqft += turf.area(f)*10.7639; }
-        if(f.geometry.type==='LineString'){ lineM += turf.length(f,{units:'kilometers'})*1000; }
-      });
-      const { base, ratePoly, rateLine } = currentRates();
-      const total = base + areaSqft*ratePoly + lineM*rateLine;
-
-      btn.disabled = true; btn.textContent = 'Saving…';
-
-      // 1) property
-      const c = map.getCenter();
-      const { data: prop, error: propErr } = await supa
-        .from('properties')
-        .insert({ account_id: ACCOUNT_ID, address: addrText, lat: c.lat, lng: c.lng })
-        .select().single();
-      if(propErr) throw propErr;
-
-      // 2) zones (preserve label in properties.label)
-      const rows = fc.features.map(f=>{
-        const isPoly = f.geometry.type==='Polygon';
-        return {
-          property_id: prop.id,
-          kind: isPoly ? (MODE==='lawn' ? 'lawn' : 'lot_snow') : (MODE==='lawn' ? 'hardscape' : 'sidewalk_snow'),
-          geojson: f,
-          area_sqft: isPoly ? turf.area(f)*10.7639 : 0,
-          length_m:  !isPoly ? turf.length(f,{units:'kilometers'})*1000 : 0,
-          label: (f.properties && f.properties.label) || null
-        };
-      });
-
-      // add "label" to zones if your table doesn't have it yet:
-      // ALTER TABLE zones ADD COLUMN IF NOT EXISTS label text;
-
-      if(rows.length){
-        const { error: zErr } = await supa.from('zones').insert(rows);
-        if(zErr) throw zErr;
-      }
-
-      // 3) quote
-      const { data: quote, error: qErr } = await supa
-        .from('quotes')
-        .insert({
-          account_id: ACCOUNT_ID,
-          property_id: prop.id,
-          base_fee: base,
-          rate_lawn: ratePoly,   // poly rate (lawn or lot)
-          rate_drive: rateLine,  // line rate (drive/sidewalk)
-          lawn_sqft: areaSqft,   // reuse for lot sqft in snow mode
-          drive_m: lineM,        // reuse for sidewalk meters in snow mode
-          total,
-          status: MODE==='snow' ? 'sent_snow' : 'sent'
-        })
-        .select().single();
-      if(qErr) throw qErr;
-
-      window.location.href = `quote-review.html?quoteId=${quote.id}`;
-    }catch(e){
-      console.error('Save Quote failed:', e);
-      alert('Save failed: ' + (e.message || e));
-    }finally{
-      const b = $('saveContinue'); if(b){ b.disabled=false; b.textContent='Save & Continue'; }
+    if(rows.length){
+      const { error: zErr } = await supa.from('zones').insert(rows);
+      if(zErr) throw zErr;
     }
-  }
 
-  // initial
-  recalc();
+    // 3) quote
+    const { data: quote, error: qErr } = await supa
+      .from('quotes')
+      .insert({
+        account_id: ACCOUNT_ID,
+        property_id: prop.id,
+        base_fee: base,
+        rate_lawn: ratePoly,
+        rate_drive: rateLine,
+        lawn_sqft: areaSqft,
+        drive_m: lineM,
+        total,
+        status: MODE==='snow' ? 'sent_snow' : 'sent'
+      })
+      .select().single();
+    if(qErr) throw qErr;
+
+    window.location.href = `quote-review.html?quoteId=${quote.id}`;
+  }catch(e){
+    console.error('Save Quote failed:', e); alert('Save failed: ' + (e.message || e));
+  }finally{
+    const b = $('saveContinue'); if(b){ b.disabled=false; b.textContent='Save & Continue'; }
+  }
+}
+
+// Kick things off
+recalc();
 </script>
 </body>
 </html>
