@@ -47,7 +47,8 @@
       <small id="snapurl" class="note"></small>
     </div>
     <div class="row" style="margin-top:8px">
-      <button class="btn primary" onclick="window.location.href='quote-review.html'">Continue</button>
+      <!-- CHANGED: this now saves first -->
+      <button id="saveContinue" class="btn primary" onclick="saveQuote()">Save & Continue</button>
     </div>
   </section>
 </main>
@@ -55,17 +56,16 @@
 <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
 <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.5.0/mapbox-gl-draw.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
-<!-- Supabase SDK -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
   /* ======================
      1) CONFIG (EDIT THESE)
      ====================== */
-  mapboxgl.accessToken = 'pk.eyJ1IjoibWlrZW5vcnJpcyIsImEiOiJjbWU0eXIyMHQwb3NlMm1wcHNkYXRwYzYxIn0.HrNdh-cFPgqR4SSYgkdHTw';              // pk.xxxxxx
-  const SUPABASE_URL = 'https://yikxwceipqtxjarcnxdr.supabase.co';                // https://xxxx.supabase.co
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlpa3h3Y2VpcHF0eGphcmNueGRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ3NzkyMTIsImV4cCI6MjA3MDM1NTIxMn0.PmvRyNucXrOMXcwsXIWAaK6pfia0bzEXUw53cHEhFqI';      // anon key ONLY
-  const ACCOUNT_ID = '0c3c69de-450c-4b76-91a7-cdc70d64ec9d';                  // from accounts table
+  mapboxgl.accessToken = 'pk.eyJ1IjoibWlrZW5vcnJpcyIsImEiOiJjbWU0eXIyMHQwb3NlMm1wcHNkYXRwYzYxIn0.HrNdh-cFPgqR4SSYgkdHTw';
+  const SUPABASE_URL = 'https://yikxwceipqtxjarcnxdr.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlpa3h3Y2VpcHF0eGphcmNueGRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ3NzkyMTIsImV4cCI6MjA3MDM1NTIxMn0.PmvRyNucXrOMXcwsXIWAaK6pfia0bzEXUw53cHEhFqI'; // anon key only
+  const ACCOUNT_ID = '0c3c69de-450c-4b76-91a7-cdc70d64ec9d'; // from accounts table
 
   /* ==============
      2) MAP SETUP
@@ -124,26 +124,20 @@
      ================== */
   const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  // Inject "Save Quote" button next to Continue
-  (function injectSaveBtn(){
-    const rows = document.querySelectorAll('.row');
-    const actions = rows[rows.length - 1];
-    const save = document.createElement('button');
-    save.className = 'btn';
-    save.textContent = 'Save Quote';
-    save.onclick = saveQuote;
-    actions.prepend(save);
-  })();
-
   async function saveQuote(){
+    const btn = document.getElementById('saveContinue') || {disabled:false, textContent:''};
     try{
+      if(!ACCOUNT_ID){ alert('Missing ACCOUNT_ID'); return; }
+
       const addr = $('addr').value || 'Unknown address';
       const base = +$('base').value||0;
       const rL   = +$('rateLawn').value||0;
       const rD   = +$('rateDrive').value||0;
 
       const fc = Draw.getAll();
-      if(!fc.features.length) { alert('Draw at least one area or line.'); return; }
+      if(!fc.features.length){ alert('Draw at least one area or line.'); return; }
+
+      btn.disabled = true; const old = btn.textContent; btn.textContent = 'Saving…';
 
       let lawnSqft = 0, driveM = 0;
       const zoneRows = fc.features.map(f=>{
@@ -189,6 +183,8 @@
     }catch(e){
       console.error('Save Quote failed:', e);
       alert('Save failed: ' + (e.message || e));
+    }finally{
+      if(btn){ btn.disabled = false; btn.textContent = 'Save & Continue'; }
     }
   }
 
