@@ -1,32 +1,49 @@
-<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Yardimo • Quote Preview</title><link rel="stylesheet" href="styles.css"/></head><body><header><div class="wrap nav">
-      <a href="index.html" class="btn" style="padding:6px 10px">🏷️ Yardimo</a>
-      <nav>
-        <a href="index.html" style="color:#fff">Quotes</a>
-        <a href="jobs.html" >Jobs</a>
-        <a href="crew.html" >Crew</a>
-        <a href="customers.html" >Customers</a>
-        <a href="pricing.html" >Pricing</a>
-        <a href="settings.html" >Settings</a>
-      </nav></div></header><main class="wrap">
-<section class="panel"><h2>Quote Preview</h2>
-<div class="grid cols-2"><div class="card">
-  <h3>Mrs. Smith — 123 Campbell St</h3><div class="note">Services: Lawn mow, edging • Optional: Mulch</div><div class="hr"></div>
-  <table class="table">
-    <tr><th>Item</th><th>Qty</th><th>Rate</th><th>Total</th></tr>
-    <tr><td>Lawn mow (3,800 sqft)</td><td>1</td><td>$0.008/sqft</td><td>$30.40</td></tr>
-    <tr><td>Edging</td><td>1</td><td>$20.00</td><td>$20.00</td></tr>
-    <tr><td>Driveway blow-off (42 m)</td><td>1</td><td>$0.80/m</td><td>$33.60</td></tr>
-    <tr><td>Base fee</td><td>1</td><td>—</td><td>$15.00</td></tr>
-    <tr><th colspan="3" style="text-align:right">Subtotal</th><th>$99.00</th></tr>
-  </table>
-  <div class="row" style="margin-top:8px">
-    <button class="btn" onclick="go('jobs.html')">Approve & Create Job</button>
-    <button class="btn" onclick="go('index.html')">Edit</button>
-  </div>
-</div>
-<div class="card">
-  <h3>Customer View</h3><p class="note">Mobile-friendly quote with approve button.</p>
-  <div class="kpi"><span>Status</span><b>Awaiting approval</b></div>
-  <div class="row" style="margin-top:8px"><button class="btn primary" onclick="go('jobs.html')">Simulate Approval</button></div>
-</div></div></section>
-</main><footer><div class="wrap" style="display:flex;align-items:center;justify-content:space-between"><span>© Yardimo</span><span class="note">Prototype — static deploy on Vercel</span></div></footer><script>function go(u){window.location.href=u;}</script></body></html>
+<section class="panel">
+  <h2>Quote Preview</h2>
+  <div id="qwrap" class="card">Loading…</div>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  // reuse same env style
+  const SUPABASE_URL = 'https://YOUR-PROJECT.supabase.co';   // <-- replace
+  const SUPABASE_ANON_KEY = 'YOUR-ANON-KEY';                  // <-- replace
+  const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  const params = new URLSearchParams(location.search);
+  const id = params.get('quoteId');
+
+  async function loadQuote() {
+    if (!id) { document.getElementById('qwrap').textContent = 'No quoteId provided.'; return; }
+
+    const { data: quote, error } = await supa
+      .from('quotes')
+      .select('id, total, base_fee, rate_lawn, rate_drive, lawn_sqft, drive_m, status, property_id')
+      .eq('id', id)
+      .single();
+    if (error) { document.getElementById('qwrap').textContent = 'Error: ' + error.message; return; }
+
+    const { data: prop } = await supa
+      .from('properties')
+      .select('address')
+      .eq('id', quote.property_id)
+      .single();
+
+    document.getElementById('qwrap').innerHTML = `
+      <h3>${prop?.address || 'Property'}</h3>
+      <div class="hr"></div>
+      <table class="table">
+        <tr><th>Item</th><th>Qty</th><th>Rate</th><th>Total</th></tr>
+        <tr><td>Lawn mow (${(quote.lawn_sqft||0).toLocaleString()} sqft)</td><td>1</td><td>$${quote.rate_lawn}/sqft</td><td>$${(quote.lawn_sqft*quote.rate_lawn).toFixed(2)}</td></tr>
+        <tr><td>Driveway blow-off (${(quote.drive_m||0).toLocaleString()} m)</td><td>1</td><td>$${quote.rate_drive}/m</td><td>$${(quote.drive_m*quote.rate_drive).toFixed(2)}</td></tr>
+        <tr><td>Base fee</td><td>1</td><td>—</td><td>$${(quote.base_fee||0).toFixed(2)}</td></tr>
+        <tr><th colspan="3" style="text-align:right">Total</th><th>$${Number(quote.total||0).toFixed(2)}</th></tr>
+      </table>
+      <div class="row" style="margin-top:8px">
+        <button class="btn primary" onclick="alert('Simulated approval'); location.href='jobs.html'">Approve & Create Job</button>
+        <button class="btn" onclick="history.back()">Edit</button>
+      </div>
+    `;
+  }
+  loadQuote();
+</script>
