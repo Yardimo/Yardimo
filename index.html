@@ -1,0 +1,40 @@
+<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Yardimo • Quotes</title><link rel="stylesheet" href="styles.css"/></head><body><header><div class="wrap nav">
+      <a href="index.html" class="btn" style="padding:6px 10px">🏷️ Yardimo</a>
+      <nav>
+        <a href="index.html" style="color:#fff">Quotes</a>
+        <a href="jobs.html" >Jobs</a>
+        <a href="crew.html" >Crew</a>
+        <a href="customers.html" >Customers</a>
+        <a href="pricing.html" >Pricing</a>
+        <a href="settings.html" >Settings</a>
+      </nav></div></header><main class="wrap">
+<section class="panel">
+  <h2>Instant Quote</h2>
+  <p class="note">Use the Map Draw tool to trace lawns/driveways and auto-calc pricing.</p>
+  <div class="grid cols-2">
+    <div class="card">
+      <label>Address</label>
+      <input class="input" placeholder="123 Campbell St" value="123 Campbell St"/>
+      <div class="row" style="margin-top:8px">
+        <label><input type="checkbox" checked/> Lawn mowing</label>
+        <label><input type="checkbox"/> Snow plow</label>
+        <label><input type="checkbox"/> Leaf cleanup</label>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn primary" onclick="go('map-draw.html')">Open Map Draw</button>
+        <button class="btn" onclick="go('quote-review.html')">Preview Quote</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Pricing rules</h3>
+      <div class="row">
+        <div style="flex:1"><label>Base</label><input class="input" value="15"/></div>
+        <div style="flex:1"><label>$ / sqft lawn</label><input class="input" value="0.008"/></div>
+        <div style="flex:1"><label>$ / m drive</label><input class="input" value="0.8"/></div>
+      </div>
+      <div class="hr"></div>
+      <div class="kpi"><span>Calculated (sample)</span><b>$96.40</b></div>
+    </div>
+  </div>
+</section>
+</main><footer><div class="wrap" style="display:flex;align-items:center;justify-content:space-between"><span>© Yardimo</span><span class="note">Prototype — static deploy on Vercel</span></div></footer><script>function go(u){window.location.href=u;}</script></body></html>

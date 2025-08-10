@@ -1,0 +1,54 @@
+<!doctype html><html><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Yardimo • Map Draw</title>
+<link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet"/>
+<link href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.5.0/mapbox-gl-draw.css" rel="stylesheet"/>
+<link rel="stylesheet" href="styles.css"/>
+<style>#map{height:70vh;border:1px solid var(--muted);border-radius:12px;overflow:hidden}#bar{display:flex;gap:8px;margin:10px 0}#addr{flex:1;padding:10px;border-radius:8px;border:1px solid var(--muted);background:#0b0f14;color:var(--text)}</style>
+</head><body>
+<header><div class="wrap nav">
+  <a href="index.html" class="btn" style="padding:6px 10px">🏷️ Yardimo</a>
+  <nav><a href="index.html" style="color:#fff">Quotes</a><a href="jobs.html">Jobs</a><a href="crew.html">Crew</a><a href="customers.html">Customers</a><a href="pricing.html">Pricing</a><a href="settings.html">Settings</a></nav>
+</div></header>
+<main class="wrap">
+<section class="panel">
+  <h2>Draw & Quote</h2>
+  <div id="bar">
+    <input id="addr" placeholder="Enter address"/><button class="btn" id="find">Find</button><button class="btn" id="clear">Clear</button>
+  </div>
+  <div id="map"></div>
+  <div class="row" style="margin-top:10px">
+    <span class="badge">Lawn: <b id="lawn">0</b> sqft</span>
+    <span class="badge">Hardscape: <b id="drive">0</b> m</span>
+    <span class="badge">Quote: <b id="total">$0.00</b></span>
+  </div>
+  <div class="row" style="margin-top:8px">
+    <label>Base $ <input id="base" class="input" type="number" step="0.01" value="15"></label>
+    <label>$ / sqft lawn <input id="rateLawn" class="input" type="number" step="0.0001" value="0.008"></label>
+    <label>$ / m drive <input id="rateDrive" class="input" type="number" step="0.01" value="0.8"></label>
+    <button class="btn" id="snapshot">Snapshot URL</button>
+    <small id="snapurl" class="note"></small>
+  </div>
+  <div class="row" style="margin-top:8px"><button class="btn primary" onclick="window.location.href='quote-review.html'">Continue</button></div>
+</section></main>
+<script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+<script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.5.0/mapbox-gl-draw.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+<script>
+mapboxgl.accessToken=(typeof process!=='undefined'&&process.env&&process.env.MAPBOX_TOKEN)?process.env.MAPBOX_TOKEN:window.MAPBOX_TOKEN||'';
+const map=new mapboxgl.Map({container:'map',style:'mapbox://styles/mapbox/satellite-streets-v12',center:[-79.3832,43.6532],zoom:15});
+const Draw=new MapboxDraw({displayControlsDefault:false,controls:{polygon:true,line_string:true,trash:true},
+  styles:[
+    {id:'gl-draw-polygon-fill',type:'fill',filter:['all',['==','$type','Polygon'],['!=','mode','static']],paint:{'fill-color':'#2dd4bf','fill-opacity':0.2}},
+    {id:'gl-draw-polygon-stroke-active',type:'line',filter:['all',['==','$type','Polygon'],['!=','mode','static']],paint:{'line-color':'#2dd4bf','line-width':2}},
+    {id:'gl-draw-line',type:'line',filter:['all',['==','$type','LineString'],['!=','mode','static']],paint:{'line-color':'#ffd447','line-width':3}}]});
+map.addControl(Draw); map.addControl(new mapboxgl.NavigationControl());
+const $=(id)=>document.getElementById(id), fmt=(n)=>(Math.round(n*100)/100).toLocaleString();
+function recalc(){const fc=Draw.getAll(); let lawn=0,drive=0; fc.features.forEach(f=>{if(f.geometry.type==='Polygon'){lawn+=turf.area(f)*10.7639;} if(f.geometry.type==='LineString'){drive+=turf.length(f,{units:'kilometers'})*1000;}});
+ $('lawn').textContent=fmt(lawn); $('drive').textContent=fmt(drive); const base=+$('base').value||0,rL=+$('rateLawn').value||0,rD=+$('rateDrive').value||0; $('total').textContent='$'+fmt(base+lawn*rL+drive*rD);}
+['draw.create','draw.update','draw.delete'].forEach(e=>map.on(e,recalc)); ['base','rateLawn','rateDrive'].forEach(id=>$ (id).addEventListener('input',recalc));
+$('clear').onclick=()=>{Draw.deleteAll();recalc();};
+$('find').onclick=async()=>{const q=$('addr').value.trim(); if(!q) return; const url=`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(q)}.json?limit=1&access_token=${mapboxgl.accessToken}`; const r=await fetch(url); const j=await r.json(); if(j.features&&j.features[0]){const [lon,lat]=j.features[0].center; map.flyTo({center:[lon,lat],zoom:19});}};
+$('snapshot').onclick=()=>{const url=`https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/static/${map.getCenter().lng},${map.getCenter().lat},${map.getZoom()},0/800x500?access_token=${mapboxgl.accessToken}`; $('snapurl').textContent=url;};
+recalc();
+</script></body></html>

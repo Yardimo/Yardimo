@@ -1,0 +1,23 @@
+<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Yardimo • Invoice</title><link rel="stylesheet" href="styles.css"/></head><body><header><div class="wrap nav">
+      <a href="index.html" class="btn" style="padding:6px 10px">🏷️ Yardimo</a>
+      <nav>
+        <a href="index.html" >Quotes</a>
+        <a href="jobs.html" style="color:#fff">Jobs</a>
+        <a href="crew.html" >Crew</a>
+        <a href="customers.html" >Customers</a>
+        <a href="pricing.html" >Pricing</a>
+        <a href="settings.html" >Settings</a>
+      </nav></div></header><main class="wrap">
+<section class="panel"><h2>Invoice • Mrs. Smith — 123 Campbell St</h2>
+<table class="table">
+<tr><th>Description</th><th>Qty</th><th>Rate</th><th>Total</th></tr>
+<tr><td>Lawn mow (3,800 sqft)</td><td>1</td><td>$0.008/sqft</td><td>$30.40</td></tr>
+<tr><td>Edging</td><td>1</td><td>$20.00</td><td>$20.00</td></tr>
+<tr><td>Driveway blow-off (42 m)</td><td>1</td><td>$0.80/m</td><td>$33.60</td></tr>
+<tr><td>Base fee</td><td>1</td><td>—</td><td>$15.00</td></tr>
+<tr><td>Mulch load (extra)</td><td>1</td><td>$120.00</td><td>$120.00</td></tr>
+<tr><th colspan="3" style="text-align:right">Total Due</th><th>$219.00</th></tr>
+</table>
+<div class="row" style="margin-top:8px"><button class="btn primary">Send to Customer</button><button class="btn">Download PDF</button><button class="btn" onclick="go('jobs.html')">Back to Jobs</button></div>
+</section>
+</main><footer><div class="wrap" style="display:flex;align-items:center;justify-content:space-between"><span>© Yardimo</span><span class="note">Prototype — static deploy on Vercel</span></div></footer><script>function go(u){window.location.href=u;}</script></body></html>
