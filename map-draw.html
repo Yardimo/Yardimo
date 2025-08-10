@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Map Test - Lawn Care Toggle</title>
+  <title>Map Draw with Pricing</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <!-- Mapbox CSS & JS -->
@@ -20,6 +20,9 @@
     type="text/css"
   />
   <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.7.2/mapbox-gl-geocoder.min.js"></script>
+
+  <!-- Turf.js for measurement -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js"></script>
 
   <style>
     body { margin: 0; padding: 0; }
@@ -59,6 +62,33 @@
       z-index: 3;
       width: 300px;
     }
+    .hud {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.8);
+      color: #fff;
+      padding: 8px 14px;
+      border-radius: 4px;
+      font-family: sans-serif;
+      font-size: 14px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      z-index: 5;
+    }
+    .clear-btn {
+      background: #e74c3c;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .clear-btn:hover {
+      background: #c0392b;
+    }
   </style>
 </head>
 <body>
@@ -71,11 +101,19 @@
 <div id="map"></div>
 <div id="geocoder" class="geocoder"></div>
 
+<div class="hud">
+  <div id="measurement">Draw an area or line...</div>
+  <button class="clear-btn" id="clearBtn">Clear Map</button>
+</div>
+
 <script>
-  // Your Mapbox token here
   mapboxgl.accessToken = 'pk.eyJ1IjoibWlrZW5vcnJpcyIsImEiOiJjbWU0eXIyMHQwb3NlMm1wcHNkYXRwYzYxIn0.HrNdh-cFPgqR4SSYgkdHTw';
 
   let currentMode = 'lawn';
+  const rates = {
+    lawn: 0.12, // per sq meter
+    snow: 0.20  // per sq meter
+  };
 
   // Init map in London, ON
   const map = new mapboxgl.Map({
@@ -85,10 +123,9 @@
     zoom: 16
   });
 
-  // Add zoom/nav controls
   map.addControl(new mapboxgl.NavigationControl());
 
-  // Add Geocoder
+  // Geocoder
   const geocoder = new MapboxGeocoder({
     accessToken: mapboxgl.accessToken,
     mapboxgl,
@@ -99,7 +136,7 @@
   });
   document.getElementById('geocoder').appendChild(geocoder.onAdd(map));
 
-  // Add Draw tools
+  // Draw controls
   const draw = new MapboxDraw({
     displayControlsDefault: false,
     controls: {
@@ -110,28 +147,51 @@
   });
   map.addControl(draw);
 
-  // Toggle button handlers
+  // Toggle buttons
   document.getElementById('lawnCareBtn').addEventListener('click', () => {
     currentMode = 'lawn';
     document.getElementById('lawnCareBtn').classList.add('active');
     document.getElementById('snowRemovalBtn').classList.remove('active');
-    console.log('Mode switched to Lawn Care');
+    updateMeasurements();
   });
 
   document.getElementById('snowRemovalBtn').addEventListener('click', () => {
     currentMode = 'snow';
     document.getElementById('snowRemovalBtn').classList.add('active');
     document.getElementById('lawnCareBtn').classList.remove('active');
-    console.log('Mode switched to Snow Removal');
+    updateMeasurements();
   });
 
-  // Log features when created/updated
-  map.on('draw.create', updateFeatures);
-  map.on('draw.update', updateFeatures);
-  map.on('draw.delete', updateFeatures);
+  // Draw events
+  map.on('draw.create', updateMeasurements);
+  map.on('draw.update', updateMeasurements);
+  map.on('draw.delete', updateMeasurements);
 
-  function updateFeatures(e) {
-    console.log('Mode:', currentMode, 'Features:', draw.getAll());
+  // Clear button
+  document.getElementById('clearBtn').addEventListener('click', () => {
+    draw.deleteAll();
+    document.getElementById('measurement').innerText = "Draw an area or line...";
+  });
+
+  function updateMeasurements() {
+    const data = draw.getAll();
+    let totalPrice = 0;
+
+    if (data.features.length > 0) {
+      data.features.forEach(feature => {
+        if (feature.geometry.type === 'Polygon') {
+          const area = turf.area(feature);
+          totalPrice += area * rates[currentMode];
+        } else if (feature.geometry.type === 'LineString') {
+          const length = turf.length(feature, { units: 'meters' });
+          totalPrice += length * rates[currentMode];
+        }
+      });
+      document.getElementById('measurement').innerText = 
+        `${currentMode === 'lawn' ? 'Lawn Care' : 'Snow Removal'} Price: $${totalPrice.toFixed(2)}`;
+    } else {
+      document.getElementById('measurement').innerText = "Draw an area or line...";
+    }
   }
 </script>
 
