@@ -1,3 +1,4 @@
+
 <!doctype html><html><head>
 <meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Yardimo • Map Draw</title>
@@ -35,7 +36,7 @@
 <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.5.0/mapbox-gl-draw.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
 <script>
-mapboxgl.accessToken=(typeof process!=='undefined'&&process.env&&process.env.MAPBOX_TOKEN)?process.env.MAPBOX_TOKEN:window.MAPBOX_TOKEN||'';
+mapboxgl.accessToken = 'pk.eyJ1IjoibWlrZW5vcnJpcyIsImEiOiJjbWU0dm5tOHAwbmN2Mm1xMmozc3Z0MGFoIn0.KjqEZ3Bw8NcjhCD9ePMAsA';
 const map=new mapboxgl.Map({container:'map',style:'mapbox://styles/mapbox/satellite-streets-v12',center:[-79.3832,43.6532],zoom:15});
 const Draw=new MapboxDraw({displayControlsDefault:false,controls:{polygon:true,line_string:true,trash:true},
   styles:[
@@ -51,4 +52,9 @@ $('clear').onclick=()=>{Draw.deleteAll();recalc();};
 $('find').onclick=async()=>{const q=$('addr').value.trim(); if(!q) return; const url=`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(q)}.json?limit=1&access_token=${mapboxgl.accessToken}`; const r=await fetch(url); const j=await r.json(); if(j.features&&j.features[0]){const [lon,lat]=j.features[0].center; map.flyTo({center:[lon,lat],zoom:19});}};
 $('snapshot').onclick=()=>{const url=`https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/static/${map.getCenter().lng},${map.getCenter().lat},${map.getZoom()},0/800x500?access_token=${mapboxgl.accessToken}`; $('snapurl').textContent=url;};
 recalc();
+<script>
+  window.SUPABASE_URL = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlpa3h3Y2VpcHF0eGphcmNueGRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ3NzkyMTIsImV4cCI6MjA3MDM1NTIxMn0.PmvRyNucXrOMXcwsXIWAaK6pfia0bzEXUw53cHEhFqI';
+  window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlpa3h3Y2VpcHF0eGphcmNueGRyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDc3OTIxMiwiZXhwIjoyMDcwMzU1MjEyfQ.GekRPSlMoByMCchNwVXJiZ2nyYRQmrMwVI8ODapnra0';
+</script>
+
 </script></body></html>
