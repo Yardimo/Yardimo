@@ -2,198 +2,304 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Map Draw with Pricing</title>
+  <title>Map Draw • Address + Pricing + Save</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <!-- Mapbox CSS & JS -->
   <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
   <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
 
-  <!-- Mapbox Draw CSS & JS -->
+  <!-- Mapbox Draw CSS & JS (stable versions that worked) -->
   <link href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.2/mapbox-gl-draw.css" rel="stylesheet" />
   <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.2/mapbox-gl-draw.js"></script>
 
-  <!-- Mapbox Geocoder CSS & JS -->
-  <link
-    rel="stylesheet"
-    href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.7.2/mapbox-gl-geocoder.css"
-    type="text/css"
-  />
+  <!-- Mapbox Geocoder CSS & JS (stable versions that worked) -->
+  <link rel="stylesheet"
+        href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.7.2/mapbox-gl-geocoder.css"
+        type="text/css" />
   <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.7.2/mapbox-gl-geocoder.min.js"></script>
 
   <!-- Turf.js for measurement -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js"></script>
 
-  <style>
-    body { margin: 0; padding: 0; }
-    #map { position: absolute; top: 50px; bottom: 0; width: 100%; }
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+  <style>
+    :root {
+      --bg:#0b0f14; --panel:#0f1720; --muted:#1c2633;
+      --text:#eaf2f6; --sub:#b8c5cf; --brand:#2dd4bf; --warn:#ffd447; --danger:#f87171;
+    }
+    * { box-sizing: border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); font:16px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Arial; }
     .top-bar {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      background: #fff;
-      z-index: 2;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 50px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-      font-family: sans-serif;
+      position: fixed; top:0; left:0; right:0; height:56px; z-index: 10;
+      display:flex; align-items:center; gap:8px; justify-content:center;
+      background:#0f1720; border-bottom:1px solid var(--muted);
     }
     .toggle-btn {
-      border: 1px solid #ccc;
-      padding: 6px 12px;
-      margin: 0 5px;
-      cursor: pointer;
-      border-radius: 4px;
-      background: #f5f5f5;
+      border:1px solid var(--muted); padding:8px 12px; border-radius:999px; cursor:pointer; color:var(--sub); background:#13212d;
     }
-    .toggle-btn.active {
-      background: #4CAF50;
-      color: white;
-      border-color: #4CAF50;
-    }
+    .toggle-btn.active { background:var(--brand); color:#05221d; border-color:transparent; font-weight:600; }
     .geocoder {
-      position: absolute;
-      top: 60px;
-      left: 10px;
-      z-index: 3;
-      width: 300px;
+      position: fixed; top:64px; left:12px; right:12px; z-index: 9;
     }
-    .hud {
-      position: absolute;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0,0,0,0.8);
-      color: #fff;
-      padding: 8px 14px;
-      border-radius: 4px;
-      font-family: sans-serif;
-      font-size: 14px;
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      z-index: 5;
+    .mapboxgl-ctrl-geocoder { width:100%; max-width:700px; margin:0 auto; }
+    #map { position: absolute; top:112px; bottom:160px; left:0; right:0; }
+    .panel {
+      position: fixed; left:0; right:0; bottom:0; height:160px; z-index: 8;
+      background: linear-gradient(180deg, rgba(15,23,32,.65), rgba(15,23,32,.95));
+      backdrop-filter: blur(6px);
+      border-top:1px solid var(--muted);
+      display:flex; gap:12px; align-items:center; padding:12px; flex-wrap:wrap; justify-content:center;
     }
-    .clear-btn {
-      background: #e74c3c;
-      color: white;
-      border: none;
-      padding: 6px 12px;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    .clear-btn:hover {
-      background: #c0392b;
+    .box { border:1px solid var(--muted); border-radius:12px; padding:8px 10px; background:#0e141c; color:var(--sub); }
+    .box b { color:var(--text); }
+    .controls { display:flex; gap:8px; flex-wrap:wrap; align-items:center; justify-content:center; }
+    .btn { background:#16202b; color:var(--text); border:1px solid var(--muted); border-radius:10px; padding:10px 12px; cursor:pointer; }
+    .btn.primary { background:var(--brand); color:#05221d; border-color:transparent; font-weight:600; }
+    .btn.danger { background:#2a1616; color:#fee; border-color:#512; }
+    label { color:var(--sub); font-size:14px; display:flex; align-items:center; gap:6px; }
+    input { background:#0b0f14; color:var(--text); border:1px solid var(--muted); border-radius:8px; padding:8px 10px; width:90px; }
+    #err { display:none; position:fixed; top:0; left:0; right:0; z-index:9999; background:#7f1d1d; color:#fff; padding:8px 10px; font-size:14px; }
+    @media (min-width: 900px) {
+      #map { bottom: 130px; }
+      .panel { height:130px; }
     }
   </style>
 </head>
 <body>
+
+<div id="err"></div>
 
 <div class="top-bar">
   <div id="lawnCareBtn" class="toggle-btn active">Lawn Care</div>
   <div id="snowRemovalBtn" class="toggle-btn">Snow Removal</div>
 </div>
 
-<div id="map"></div>
 <div id="geocoder" class="geocoder"></div>
+<div id="map"></div>
 
-<div class="hud">
-  <div id="measurement">Draw an area or line...</div>
-  <button class="clear-btn" id="clearBtn">Clear Map</button>
+<div class="panel">
+  <!-- Live metrics -->
+  <div class="box">Area: <b id="areaSqft">0</b> sqft</div>
+  <div class="box">Linear: <b id="lengthM">0</b> m</div>
+  <div class="box">Quote: <b id="quoteTotal">$0.00</b></div>
+
+  <!-- Mode-specific pricing inputs -->
+  <div class="controls">
+    <div id="lawnRates" class="controls">
+      <label>Base<input id="baseLawn" type="number" step="0.01" value="15"></label>
+      <label>$ / sqft lawn<input id="rateLawnSqft" type="number" step="0.0001" value="0.008"></label>
+      <label>$ / m drive<input id="rateDriveM" type="number" step="0.01" value="0.80"></label>
+    </div>
+    <div id="snowRates" class="controls" style="display:none">
+      <label>Base<input id="baseSnow" type="number" step="0.01" value="25"></label>
+      <label>$ / sqft lot<input id="rateLotSqft" type="number" step="0.0001" value="0.010"></label>
+      <label>$ / m sidewalk<input id="rateSidewalkM" type="number" step="0.01" value="1.20"></label>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="btn" id="btnPoly">Add Area</button>
+    <button class="btn" id="btnLine">Add Edge</button>
+    <button class="btn" id="btnFinish">Finish</button>
+    <button class="btn" id="btnUndo">Undo</button>
+    <button class="btn danger" id="btnClear">Clear</button>
+    <button class="btn primary" id="btnSave">Save Quote</button>
+  </div>
 </div>
 
 <script>
+  /* ====== CONFIG (FILL THESE) ====== */
   mapboxgl.accessToken = 'pk.eyJ1IjoibWlrZW5vcnJpcyIsImEiOiJjbWU0eXIyMHQwb3NlMm1wcHNkYXRwYzYxIn0.HrNdh-cFPgqR4SSYgkdHTw';
+  const SUPABASE_URL = 'https://yikxwceipqtxjarcnxdr.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlpa3h3Y2VpcHF0eGphcmNueGRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ3NzkyMTIsImV4cCI6MjA3MDM1NTIxMn0.PmvRyNucXrOMXcwsXIWAaK6pfia0bzEXUw53cHEhFqI';
+  const ACCOUNT_ID = '0c3c69de-450c-4b76-91a7-cdc70d64ec9d'; // e.g. '0c3c69de-450c-4b76-91a7-cdc70d64ec9d' or leave blank to see error
 
-  let currentMode = 'lawn';
-  const rates = {
-    lawn: 0.12, // per sq meter
-    snow: 0.20  // per sq meter
-  };
+  /* ====== ERRORS ====== */
+  const showErr = (m) => { const el=document.getElementById('err'); el.textContent=m; el.style.display='block'; };
 
-  // Init map in London, ON
+  /* ====== STATE ====== */
+  let mode = 'lawn'; // 'lawn' | 'snow'
+  const $ = (id) => document.getElementById(id);
+  const fmt2 = (n) => (Math.round(n*100)/100).toLocaleString();
+
+  /* ====== MAP ====== */
   const map = new mapboxgl.Map({
     container: 'map',
     style: 'mapbox://styles/mapbox/satellite-streets-v12',
-    center: [-81.2497, 42.9836],
+    center: [-81.2497, 42.9836], // London, ON
     zoom: 16
   });
-
   map.addControl(new mapboxgl.NavigationControl());
+  map.dragRotate.disable(); map.touchZoomRotate.disableRotation();
+  map.once('load', ()=> map.resize());
 
-  // Geocoder
+  /* ====== GEOCODER ====== */
   const geocoder = new MapboxGeocoder({
     accessToken: mapboxgl.accessToken,
-    mapboxgl,
-    placeholder: 'Search address',
-    marker: false,
-    flyTo: { zoom: 19, speed: 0.8 },
-    countries: 'ca,us'
+    mapboxgl, marker:false, placeholder:'Search address',
+    flyTo: { zoom: 19, speed: 0.8 }, countries: 'ca,us'
   });
-  document.getElementById('geocoder').appendChild(geocoder.onAdd(map));
+  $('geocoder').appendChild(geocoder.onAdd(map));
 
-  // Draw controls
+  // store last chosen address text
+  let selectedAddress = '';
+  geocoder.on('result', (e) => {
+    selectedAddress = e.result.place_name || '';
+  });
+
+  /* ====== DRAW ====== */
   const draw = new MapboxDraw({
-    displayControlsDefault: false,
-    controls: {
-      polygon: true,
-      line_string: true,
-      trash: true
-    }
+    displayControlsDefault:false,
+    controls: { polygon:true, line_string:true, trash:true }
   });
   map.addControl(draw);
 
-  // Toggle buttons
-  document.getElementById('lawnCareBtn').addEventListener('click', () => {
-    currentMode = 'lawn';
-    document.getElementById('lawnCareBtn').classList.add('active');
-    document.getElementById('snowRemovalBtn').classList.remove('active');
-    updateMeasurements();
+  // external buttons for draw modes
+  $('btnPoly').onclick = ()=> draw.changeMode('draw_polygon');
+  $('btnLine').onclick = ()=> draw.changeMode('draw_line_string');
+  $('btnFinish').onclick = ()=> draw.changeMode('simple_select');
+  $('btnUndo').onclick = ()=>{
+    const sel = draw.getSelectedIds(); 
+    if (sel.length) { draw.trash(); }
+    else {
+      const all = draw.getAll().features;
+      if (all.length) draw.delete(all[all.length-1].id);
+    }
+    recalc();
+  };
+  $('btnClear').onclick = ()=> { draw.deleteAll(); recalc(); };
+
+  map.on('draw.create', recalc);
+  map.on('draw.update', recalc);
+  map.on('draw.delete', recalc);
+
+  /* ====== MODE TOGGLE ====== */
+  $('lawnCareBtn').onclick = () => { mode='lawn'; toggleModeUI(); recalc(); };
+  $('snowRemovalBtn').onclick = () => { mode='snow'; toggleModeUI(); recalc(); };
+
+  function toggleModeUI(){
+    $('lawnCareBtn').classList.toggle('active', mode==='lawn');
+    $('snowRemovalBtn').classList.toggle('active', mode==='snow');
+    $('lawnRates').style.display = mode==='lawn' ? 'flex' : 'none';
+    $('snowRates').style.display = mode==='snow' ? 'flex' : 'none';
+  }
+
+  /* ====== PRICING + METRICS ====== */
+  ['baseLawn','rateLawnSqft','rateDriveM','baseSnow','rateLotSqft','rateSidewalkM'].forEach(id=>{
+    const el=$(id); if(el) el.addEventListener('input', recalc);
   });
 
-  document.getElementById('snowRemovalBtn').addEventListener('click', () => {
-    currentMode = 'snow';
-    document.getElementById('snowRemovalBtn').classList.add('active');
-    document.getElementById('lawnCareBtn').classList.remove('active');
-    updateMeasurements();
-  });
+  function currentRates(){
+    return (mode==='lawn')
+      ? { base:+$('baseLawn').value||0, ratePoly:+$('rateLawnSqft').value||0, rateLine:+$('rateDriveM').value||0 }
+      : { base:+$('baseSnow').value||0, ratePoly:+$('rateLotSqft').value||0, rateLine:+$('rateSidewalkM').value||0 };
+  }
 
-  // Draw events
-  map.on('draw.create', updateMeasurements);
-  map.on('draw.update', updateMeasurements);
-  map.on('draw.delete', updateMeasurements);
+  function recalc(){
+    const fc = draw.getAll();
+    let areaSqft=0, lengthM=0;
 
-  // Clear button
-  document.getElementById('clearBtn').addEventListener('click', () => {
-    draw.deleteAll();
-    document.getElementById('measurement').innerText = "Draw an area or line...";
-  });
+    fc.features.forEach(f=>{
+      if(f.geometry.type==='Polygon'){
+        // turf.area -> m²; convert to ft²
+        areaSqft += turf.area(f) * 10.7639;
+      } else if (f.geometry.type==='LineString'){
+        // turf.length -> kilometers; convert to meters
+        lengthM += turf.length(f,{units:'kilometers'}) * 1000;
+      }
+    });
 
-  function updateMeasurements() {
-    const data = draw.getAll();
-    let totalPrice = 0;
+    const { base, ratePoly, rateLine } = currentRates();
+    const total = base + areaSqft*ratePoly + lengthM*rateLine;
 
-    if (data.features.length > 0) {
-      data.features.forEach(feature => {
-        if (feature.geometry.type === 'Polygon') {
-          const area = turf.area(feature);
-          totalPrice += area * rates[currentMode];
-        } else if (feature.geometry.type === 'LineString') {
-          const length = turf.length(feature, { units: 'meters' });
-          totalPrice += length * rates[currentMode];
-        }
+    $('areaSqft').textContent = fmt2(areaSqft);
+    $('lengthM').textContent  = fmt2(lengthM);
+    $('quoteTotal').textContent = '$' + fmt2(total);
+  }
+
+  /* ====== SAVE TO SUPABASE ====== */
+  const supa = (SUPABASE_URL && SUPABASE_ANON_KEY)
+    ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+    : null;
+
+  $('btnSave').onclick = saveQuote;
+
+  async function saveQuote(){
+    try{
+      if(!supa){ showErr('Supabase not configured. Set YOUR_SUPABASE_URL and YOUR_SUPABASE_ANON_KEY.'); return; }
+      if(!ACCOUNT_ID){ showErr('Missing ACCOUNT_ID. Set ACCOUNT_ID at the top.'); return; }
+
+      const fc = draw.getAll();
+      if(!fc.features.length){ showErr('Draw at least one area or line before saving.'); return; }
+
+      // recompute totals from draw
+      let areaSqft=0, lengthM=0;
+      fc.features.forEach(f=>{
+        if(f.geometry.type==='Polygon') areaSqft += turf.area(f) * 10.7639;
+        if(f.geometry.type==='LineString') lengthM += turf.length(f,{units:'kilometers'}) * 1000;
       });
-      document.getElementById('measurement').innerText = 
-        `${currentMode === 'lawn' ? 'Lawn Care' : 'Snow Removal'} Price: $${totalPrice.toFixed(2)}`;
-    } else {
-      document.getElementById('measurement').innerText = "Draw an area or line...";
+      const { base, ratePoly, rateLine } = currentRates();
+      const total = base + areaSqft*ratePoly + lengthM*rateLine;
+
+      const addrText = selectedAddress || (document.querySelector('.mapboxgl-ctrl-geocoder input')?.value || 'Unknown address');
+
+      // 1) property
+      const c = map.getCenter();
+      const { data: prop, error: propErr } = await supa
+        .from('properties')
+        .insert({ account_id: ACCOUNT_ID, address: addrText, lat: c.lat, lng: c.lng })
+        .select().single();
+      if(propErr) throw propErr;
+
+      // 2) zones
+      const rows = fc.features.map(f=>{
+        const isPoly = f.geometry.type==='Polygon';
+        return {
+          property_id: prop.id,
+          kind: isPoly ? (mode==='lawn' ? 'lawn' : 'lot_snow')
+                       : (mode==='lawn' ? 'hardscape' : 'sidewalk_snow'),
+          geojson: f,
+          area_sqft: isPoly ? turf.area(f)*10.7639 : 0,
+          length_m:  !isPoly ? turf.length(f,{units:'kilometers'})*1000 : 0,
+          label: (f.properties && f.properties.label) || null
+        };
+      });
+      if(rows.length){
+        const { error: zErr } = await supa.from('zones').insert(rows);
+        if(zErr) throw zErr;
+      }
+
+      // 3) quote
+      const { data: quote, error: qErr } = await supa
+        .from('quotes')
+        .insert({
+          account_id: ACCOUNT_ID,
+          property_id: prop.id,
+          base_fee: base,
+          rate_lawn: ratePoly,   // for snow, we still store in this column to keep schema simple
+          rate_drive: rateLine,
+          lawn_sqft: areaSqft,   // reuse for lot sqft in snow
+          drive_m: lengthM,      // reuse for sidewalk meters in snow
+          total,
+          status: mode==='snow' ? 'sent_snow' : 'sent'
+        })
+        .select().single();
+      if(qErr) throw qErr;
+
+      alert('Saved! Quote #' + quote.id + ' total $' + fmt2(total));
+      // redirect if you have a review page:
+      // window.location.href = `quote-review.html?quoteId=${quote.id}`;
+    }catch(err){
+      console.error(err);
+      showErr('Save failed: ' + (err?.message || err));
     }
   }
-</script>
 
+  // kick off first calc
+  recalc();
+</script>
 </body>
 </html>
