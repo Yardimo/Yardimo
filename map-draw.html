@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Map Test - London ON with Draw & Geocoder</title>
+  <title>Map Test - Lawn Care Toggle</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <!-- Mapbox CSS & JS -->
@@ -23,17 +23,50 @@
 
   <style>
     body { margin: 0; padding: 0; }
-    #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+    #map { position: absolute; top: 50px; bottom: 0; width: 100%; }
+
+    .top-bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: #fff;
+      z-index: 2;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 50px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      font-family: sans-serif;
+    }
+    .toggle-btn {
+      border: 1px solid #ccc;
+      padding: 6px 12px;
+      margin: 0 5px;
+      cursor: pointer;
+      border-radius: 4px;
+      background: #f5f5f5;
+    }
+    .toggle-btn.active {
+      background: #4CAF50;
+      color: white;
+      border-color: #4CAF50;
+    }
     .geocoder {
       position: absolute;
-      top: 10px;
+      top: 60px;
       left: 10px;
-      z-index: 1;
+      z-index: 3;
       width: 300px;
     }
   </style>
 </head>
 <body>
+
+<div class="top-bar">
+  <div id="lawnCareBtn" class="toggle-btn active">Lawn Care</div>
+  <div id="snowRemovalBtn" class="toggle-btn">Snow Removal</div>
+</div>
 
 <div id="map"></div>
 <div id="geocoder" class="geocoder"></div>
@@ -41,6 +74,8 @@
 <script>
   // Your Mapbox token here
   mapboxgl.accessToken = 'pk.eyJ1IjoibWlrZW5vcnJpcyIsImEiOiJjbWU0eXIyMHQwb3NlMm1wcHNkYXRwYzYxIn0.HrNdh-cFPgqR4SSYgkdHTw';
+
+  let currentMode = 'lawn';
 
   // Init map in London, ON
   const map = new mapboxgl.Map({
@@ -75,16 +110,30 @@
   });
   map.addControl(draw);
 
+  // Toggle button handlers
+  document.getElementById('lawnCareBtn').addEventListener('click', () => {
+    currentMode = 'lawn';
+    document.getElementById('lawnCareBtn').classList.add('active');
+    document.getElementById('snowRemovalBtn').classList.remove('active');
+    console.log('Mode switched to Lawn Care');
+  });
+
+  document.getElementById('snowRemovalBtn').addEventListener('click', () => {
+    currentMode = 'snow';
+    document.getElementById('snowRemovalBtn').classList.add('active');
+    document.getElementById('lawnCareBtn').classList.remove('active');
+    console.log('Mode switched to Snow Removal');
+  });
+
   // Log features when created/updated
   map.on('draw.create', updateFeatures);
   map.on('draw.update', updateFeatures);
   map.on('draw.delete', updateFeatures);
 
   function updateFeatures(e) {
-    console.log('Features:', draw.getAll());
+    console.log('Mode:', currentMode, 'Features:', draw.getAll());
   }
 </script>
 
 </body>
 </html>
-
