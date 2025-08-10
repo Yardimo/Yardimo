@@ -317,4 +317,62 @@ async function saveQuote(){
       if(f.geometry.type==='Polygon'){ areaSqft += turf.area(f)*10.7639; }
       if(f.geometry.type==='LineString'){ lineM += turf.length(f,{units:'kilometers'})*1000; }
     });
-    const { base,
+    const { base, ratePoly, rateLine } = currentRates();
+    const total = base + areaSqft*ratePoly + lineM*rateLine;
+
+    btn.disabled=true; btn.textContent='Saving…';
+
+    const c = map.getCenter();
+    const { data: prop, error: propErr } = await supa
+      .from('properties')
+      .insert({ account_id: ACCOUNT_ID, address: addrText, lat: c.lat, lng: c.lng })
+      .select().single();
+    if(propErr) throw propErr;
+
+    const rows = fc.features.map(f=>{
+      const isPoly = f.geometry.type==='Polygon';
+      return {
+        property_id: prop.id,
+        kind: isPoly ? (MODE==='lawn' ? 'lawn' : 'lot_snow') : (MODE==='lawn' ? 'hardscape' : 'sidewalk_snow'),
+        geojson: f,
+        area_sqft: isPoly ? turf.area(f)*10.7639 : 0,
+        length_m:  !isPoly ? turf.length(f,{units:'kilometers'})*1000 : 0,
+        label: (f.properties && f.properties.label) || null
+      };
+    });
+    if(rows.length){
+      const { error: zErr } = await supa.from('zones').insert(rows);
+      if(zErr) throw zErr;
+    }
+
+    const { data: quote, error: qErr } = await supa
+      .from('quotes')
+      .insert({
+        account_id: ACCOUNT_ID,
+        property_id: prop.id,
+        base_fee: (MODE==='lawn' ? +baseLawn.value : +baseSnow.value) || 0,
+        rate_lawn: (MODE==='lawn' ? +rateLawnSqft.value : +rateLotSqft.value) || 0,
+        rate_drive: (MODE==='lawn' ? +rateDriveM.value : +rateSidewalkM.value) || 0,
+        lawn_sqft: areaSqft,
+        drive_m: lineM,
+        total,
+        status: MODE==='snow' ? 'sent_snow' : 'sent'
+      })
+      .select().single();
+    if(qErr) throw qErr;
+
+    window.location.href = `quote-review.html?quoteId=${quote.id}`;
+  }catch(e){
+    console.error(e);
+    alert('Save failed: ' + (e.message || e));
+  }finally{
+    btn.disabled=false; btn.textContent='Save & Continue';
+  }
+}
+
+/* ========== FINAL: ensure this file is live ========== */
+// quick tell: version badge should show "v4.1 • London default"
+// if not, you're seeing a cached or different file. Try map-draw.html?v=41
+</script>
+</body>
+</html>
