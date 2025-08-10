@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Yardimo • Map Draw (v6.1)</title>
+  <title>Yardimo • Map Draw (v6.2c)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 
   <!-- Mapbox GL -->
@@ -27,8 +27,7 @@
     :root{
       --bg:#0b0f14; --panel:#0f1720; --muted:#1c2633; --text:#eaf2f6; --sub:#b8c5cf;
       --brand:#2dd4bf; --warn:#ffd447; --danger:#f87171;
-      /* Mobile-friendly, adapts to short screens */
-      --panel-h: clamp(200px, 33vh, 260px);
+      --panel-h: clamp(200px, 33vh, 260px); /* mobile-friendly height */
     }
     @media (min-width:900px){ :root{ --panel-h: 150px; } }
 
@@ -53,17 +52,13 @@
       display:flex;gap:12px;align-items:flex-start;justify-content:center;flex-wrap:wrap;
       padding:12px; padding-bottom:calc(12px + env(safe-area-inset-bottom)); overflow:auto;
     }
-    .box{border:1px solid var(--muted);border-radius:12px;padding:8px 10px;background:#0e141c;color:var(--sub)}
+    .box{border:1px solid var(--muted);border-radius:12px;padding:8px 10px;background:#0e141c;color:#b8c5cf}
     .box b{color:var(--text)}
     .btn{background:#16202b;color:var(--text);border:1px solid var(--muted);border-radius:10px;padding:10px 12px;cursor:pointer}
     .btn.primary{background:var(--brand);color:#05221d;border-color:transparent;font-weight:600}
     .btn.danger{background:#2a1616;color:#fee;border-color:#512}
-    label{color:var(--sub);font-size:14px;display:flex;align-items:center;gap:6px}
-    input{background:#0b0f14;color:var(--text);border:1px solid var(--muted);border-radius:8px;padding:8px 10px;width:92px}
-
-    /* Floating mini toolbar (mobile only) */
-    #fab{position:fixed;right:12px;bottom:calc(var(--panel-h) + 12px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px;z-index:9}
-    @media (min-width:900px){ #fab{ display:none; } }
+    label{color:#b8c5cf;font-size:14px;display:flex;align-items:center;gap:6px}
+    input{background:#0b0f14;color:var(--text);border:1px solid var(--muted);border-radius:8px;padding:8px 10px;width:140px}
 
     /* Error ribbon */
     #err{display:none;position:fixed;left:0;right:0;top:0;z-index:9999;background:#7f1d1d;color:#fff;padding:8px 10px;font-size:14px}
@@ -83,39 +78,51 @@
 <div id="geocoder"></div>
 <div id="map" aria-label="Map drawing area"></div>
 
-<!-- Floating mini toolbar (mobile) -->
-<div id="fab" aria-label="Drawing quick actions">
-  <button id="fabArea" class="btn" aria-label="Add Area">+ Area</button>
-  <button id="fabLine" class="btn" aria-label="Add Edge">+ Edge</button>
-  <button id="fabDone" class="btn" aria-label="Finish Drawing">Finish</button>
-</div>
-
 <!-- Bottom panel -->
 <div class="panel">
-  <div class="box" aria-live="polite">Area: <b id="areaSqft">0</b> sqft</div>
-  <div class="box" aria-live="polite">Linear: <b id="lengthM">0</b> m</div>
-  <div class="box" aria-live="polite">Quote: <b id="quoteTotal">$0.00</b></div>
+  <div class="box" aria-live="polite">
+    Lawn area: <b id="areaSqft">0</b> sqft (<span id="areaSqm">0</span> m²)
+  </div>
+  <div class="box" aria-live="polite">
+    Edge length: <b id="lengthFt">0</b> ft (<span id="lengthM">0</span> m)
+  </div>
+  <div class="box" aria-live="polite">
+    Estimated total: <b id="quoteTotal">$0.00</b>
+    <div id="priceBreakdown" style="font-size:12px;color:#b8c5cf;margin-top:4px">Add an area or edge to calculate.</div>
+  </div>
 
   <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
     <div id="lawnRates" style="display:flex;gap:10px;flex-wrap:wrap">
-      <label>Base<input id="baseLawn" type="number" step="0.01" value="15"></label>
-      <label>$ / sqft lawn<input id="rateLawnSqft" type="number" step="0.0001" value="0.008"></label>
-      <label>$ / m drive<input id="rateDriveM" type="number" step="0.01" value="0.80"></label>
+      <label>Base fee<input id="baseLawn" type="number" step="0.01" value="15"></label>
+      <label>$ / sqft mowing<input id="rateLawnSqft" type="number" step="0.0001" value="0.008"></label>
+      <label>$ / ft edge/drive<input id="rateDriveFt" type="number" step="0.01" value="0.80"></label>
     </div>
     <div id="snowRates" style="display:none;gap:10px;flex-wrap:wrap">
-      <label>Base<input id="baseSnow" type="number" step="0.01" value="25"></label>
+      <label>Base fee<input id="baseSnow" type="number" step="0.01" value="25"></label>
       <label>$ / sqft lot<input id="rateLotSqft" type="number" step="0.0001" value="0.010"></label>
-      <label>$ / m sidewalk<input id="rateSidewalkM" type="number" step="0.01" value="1.20"></label>
+      <label>$ / ft sidewalk<input id="rateSidewalkFt" type="number" step="0.01" value="0.80"></label>
     </div>
   </div>
 
   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-    <button class="btn" id="btnPoly" aria-label="Add Area">Add Area</button>
-    <button class="btn" id="btnLine" aria-label="Add Edge">Add Edge</button>
+    <button class="btn" id="btnPoly" aria-label="Start Area">Start Area</button>
+    <button class="btn" id="btnLine" aria-label="Start Edge">Start Edge</button>
     <button class="btn" id="btnFinish" aria-label="Finish Drawing">Finish</button>
     <button class="btn" id="btnUndo" aria-label="Undo last action">Undo</button>
     <button class="btn danger" id="btnClear" aria-label="Clear map">Clear</button>
-    <button class="btn primary" id="btnSave" aria-label="Save Quote">Save Quote</button>
+
+    <!-- Label input for last finished shape -->
+    <label style="display:flex;gap:6px;align-items:center">
+      Label
+      <input id="zoneLabel" placeholder="Front lawn / Driveway" />
+    </label>
+
+    <button class="btn primary" id="btnSave" aria-label="Save Estimate">Save estimate</button>
+  </div>
+
+  <!-- Context hint -->
+  <div id="drawHint" style="width:100%;text-align:center;color:#b8c5cf;font-size:13px;margin-top:4px">
+    Tap “Start Area”, then tap on the map to add points. Double-tap to finish.
   </div>
 </div>
 
@@ -124,8 +131,7 @@
    * ====== Security note (Supabase RLS) ======
    * Using the anon key in the browser is OK only if Row Level Security is ON
    * and policies restrict writes to the current ACCOUNT_ID or user context.
-   * Ensure 'properties', 'zones', and 'quotes' all have RLS enabled and
-   * per-account policies (or move writes to a server/edge function).
+   * Ensure 'properties', 'zones', and 'quotes' all have RLS enabled.
    */
 
   /* ========= Credentials (yours) ========= */
@@ -153,11 +159,15 @@
   if (typeof MapboxGeocoder === 'undefined') showErr('Geocoder failed to load.');
   const geocoder = new MapboxGeocoder({
     accessToken: mapboxgl.accessToken, mapboxgl, marker:false,
-    placeholder:'Search address', flyTo:{zoom:19, speed:0.8}, countries:'ca,us'
+    placeholder:'Search street address', flyTo:{zoom:19, speed:0.8}, countries:'ca,us'
   });
   $('geocoder').appendChild(geocoder.onAdd(map));
   let selectedAddress = '';
   geocoder.on('result', e => { selectedAddress = e.result.place_name || ''; });
+  window.addEventListener('load', () => {
+    const search = document.querySelector('.mapboxgl-ctrl-geocoder input');
+    if (search) search.focus({ preventScroll:true });
+  });
 
   /* ========= Draw (larger vertices) ========= */
   if (typeof MapboxDraw === 'undefined') showErr('Draw plugin failed to load.');
@@ -182,29 +192,14 @@
   let drawing = false;
   map.on('draw.modechange', e => {
     drawing = (e.mode==='draw_polygon' || e.mode==='draw_line_string');
-    if (drawing) {
-      map.doubleClickZoom.disable();
-      map.dragPan.disable();       // lock panning while placing vertices
-    } else {
-      map.doubleClickZoom.enable();
-      map.dragPan.enable();
-    }
+    if (drawing) { map.doubleClickZoom.disable(); map.dragPan.disable(); }
+    else { map.doubleClickZoom.enable(); map.dragPan.enable(); }
+    setButtonsState(e.mode);
   });
-
   // Double-tap/Double-click to finish
   $('map').addEventListener('dblclick', () => { if (drawing) draw.changeMode('simple_select'); }, {passive:true});
-
   // ESC to cancel/finish drawing (keyboard)
-  window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && drawing) {
-      draw.changeMode('simple_select');
-    }
-  });
-
-  /* ========= Floating toolbar wiring ========= */
-  $('fabArea').onclick = ()=> draw.changeMode('draw_polygon');
-  $('fabLine').onclick = ()=> draw.changeMode('draw_line_string');
-  $('fabDone').onclick = ()=> draw.changeMode('simple_select');
+  window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && drawing) draw.changeMode('simple_select'); });
 
   /* ========= Bottom buttons ========= */
   $('btnPoly').onclick = ()=> draw.changeMode('draw_polygon');
@@ -218,8 +213,27 @@
   };
   $('btnClear').onclick = ()=> { draw.deleteAll(); scheduleRecalc(); };
 
-  /* ========= Mode toggle + pricing ========= */
-  let mode = 'lawn';
+  // Apply label to the last finished feature (if provided)
+  function applyLabelToLast(label){
+    if(!label) return;
+    const fc = draw.getAll();
+    const last = fc.features[fc.features.length-1];
+    if(!last) return;
+    last.properties = last.properties || {};
+    last.properties.label = label;
+    draw.add(last); draw.delete(last.id); // re-add to persist props
+  }
+  $('btnFinish').addEventListener('click', ()=>{
+    const label = ($('zoneLabel').value || '').trim();
+    applyLabelToLast(label);
+  });
+  $('map').addEventListener('dblclick', ()=>{
+    const label = ($('zoneLabel').value || '').trim();
+    applyLabelToLast(label);
+  }, {passive:true});
+
+  /* ========= Mode toggle & labels ========= */
+  let mode = 'lawn'; // 'lawn' | 'snow'
   $('lawnBtn').onclick = ()=>{ mode='lawn'; setModeUI(); scheduleRecalc(); };
   $('snowBtn').onclick = ()=>{ mode='snow'; setModeUI(); scheduleRecalc(); };
   function setModeUI(){
@@ -229,38 +243,92 @@
     $('snowBtn').setAttribute('aria-pressed', mode==='snow');
     $('lawnRates').style.display = mode==='lawn' ? 'flex' : 'none';
     $('snowRates').style.display = mode==='snow' ? 'flex' : 'none';
+
+    // Button copy per mode
+    $('btnLine').textContent = (mode==='lawn') ? 'Start Edge' : 'Start Sidewalk';
+
+    // Metric titles per mode
+    document.querySelector('.panel .box:nth-child(1)').firstChild.textContent =
+      (mode==='lawn') ? 'Lawn area: ' : 'Lot area: ';
+    document.querySelector('.panel .box:nth-child(2)').firstChild.textContent =
+      (mode==='lawn') ? 'Edge length: ' : 'Sidewalk length: ';
   }
 
-  ['baseLawn','rateLawnSqft','rateDriveM','baseSnow','rateLotSqft','rateSidewalkM'].forEach(id=>{
-    const el=$(id); if(el) el.addEventListener('input', scheduleRecalc, {passive:true});
+  /* ========= Pricing ========= */
+  const rateInputs = ['baseLawn','rateLawnSqft','rateDriveFt','baseSnow','rateLotSqft','rateSidewalkFt'];
+  rateInputs.forEach(id=>{
+    const el=$(id); if(!el) return;
+    const key='yd_rate_'+id;
+    const saved=localStorage.getItem(key);
+    if(saved!==null) el.value=saved;
+    el.addEventListener('input', ()=>localStorage.setItem(key, el.value));
+    el.addEventListener('input', scheduleRecalc, {passive:true});
   });
-
   function currentRates(){
     return (mode==='lawn')
-      ? { base:+$('baseLawn').value||0, ratePoly:+$('rateLawnSqft').value||0, rateLine:+$('rateDriveM').value||0 }
-      : { base:+$('baseSnow').value||0, ratePoly:+$('rateLotSqft').value||0, rateLine:+$('rateSidewalkM').value||0 };
+      ? { base:+$('baseLawn').value||0, rateSqft:+$('rateLawnSqft').value||0, rateFt:+$('rateDriveFt').value||0 }
+      : { base:+$('baseSnow').value||0, rateSqft:+$('rateLotSqft').value||0, rateFt:+$('rateSidewalkFt').value||0 };
   }
 
-  // rAF-debounced recalc for smoother drags
+  // rAF-debounced recalc
   let recalcRAF = null;
-  function scheduleRecalc(){
-    if (recalcRAF) return;
-    recalcRAF = requestAnimationFrame(()=>{ recalcRAF=null; recalc(); });
-  }
+  function scheduleRecalc(){ if (recalcRAF) return; recalcRAF = requestAnimationFrame(()=>{ recalcRAF=null; recalc(); }); }
 
   function recalc(){
     const fc = draw.getAll();
-    let areaSqft=0, lengthM=0;
+    let areaSqm=0, lengthM=0;
+
     fc.features.forEach(f=>{
-      if(f.geometry.type==='Polygon'){ areaSqft += turf.area(f)*10.7639; }
-      if(f.geometry.type==='LineString'){ lengthM += turf.length(f,{units:'kilometers'})*1000; }
+      if(f.geometry.type==='Polygon'){ areaSqm += turf.area(f); } // m²
+      if(f.geometry.type==='LineString'){ lengthM += turf.length(f,{units:'kilometers'})*1000; } // m
     });
-    const { base, ratePoly, rateLine } = currentRates();
-    const total = base + areaSqft*ratePoly + lengthM*rateLine;
+
+    // Convert for display + pricing
+    const areaSqft = areaSqm * 10.7639;
+    const lengthFt = lengthM * 3.28084;
+
+    // Update metrics (dual units, Imperial first)
     $('areaSqft').textContent = fmt2(areaSqft);
+    $('areaSqm').textContent  = fmt2(areaSqm);
+    $('lengthFt').textContent = fmt2(lengthFt);
     $('lengthM').textContent  = fmt2(lengthM);
-    $('quoteTotal').textContent= '$'+fmt2(total);
+
+    const { base, rateSqft, rateFt } = currentRates();
+    const rawTotal = base + areaSqft*rateSqft + lengthFt*rateFt;
+    const rounded  = Math.round(rawTotal * 2) / 2; // nearest $0.50 for display
+
+    $('quoteTotal').textContent = '$' + (Math.round(rounded*100)/100).toLocaleString();
+
+    const parts = [];
+    if (base) parts.push(`Base $${base.toFixed(2)}`);
+    if (areaSqft && rateSqft) parts.push(`${Math.round(areaSqft).toLocaleString()} sqft × $${rateSqft}`);
+    if (lengthFt && rateFt)   parts.push(`${Math.round(lengthFt).toLocaleString()} ft × $${rateFt}`);
+    $('priceBreakdown').textContent = parts.length ? parts.join(' + ') : 'Add an area or edge to calculate.';
+
+    // Buttons state
+    setButtonsState();
   }
+
+  function setButtonsState(modeName){
+    const hasAny = draw.getAll().features.length > 0;
+    const isDrawing = (modeName ? (modeName==='draw_polygon'||modeName==='draw_line_string') : drawing);
+    $('btnFinish').disabled = !isDrawing;
+    $('btnSave').disabled   = !hasAny;
+
+    if (!isDrawing) {
+      $('drawHint').textContent = 'Tap “Start Area”, then tap on the map to add points. Double-tap to finish.';
+      $('btnFinish').textContent = 'Finish';
+    } else if (modeName==='draw_polygon') {
+      $('drawHint').textContent = 'Placing area points… Double-tap to finish the area.';
+      $('btnFinish').textContent = 'Finish Area';
+    } else if (modeName==='draw_line_string') {
+      $('drawHint').textContent = (mode==='lawn')
+        ? 'Placing edge points… Double-tap to finish the edge.'
+        : 'Placing sidewalk points… Double-tap to finish the sidewalk.';
+      $('btnFinish').textContent = (mode==='lawn') ? 'Finish Edge' : 'Finish Sidewalk';
+    }
+  }
+
   map.on('draw.create', scheduleRecalc);
   map.on('draw.update', scheduleRecalc);
   map.on('draw.delete', scheduleRecalc);
@@ -275,16 +343,18 @@
       if(!ACCOUNT_ID){ alert('Missing ACCOUNT_ID.'); return; }
 
       const fc = draw.getAll();
-      if(!fc.features.length){ alert('Draw at least one area or line.'); return; }
+      if(!fc.features.length){ alert('Draw at least one area or edge.'); return; }
 
-      // totals
-      let areaSqft=0, lengthM=0;
+      // totals (compute from geometry, not from DOM)
+      let areaSqm=0, lengthM=0;
       fc.features.forEach(f=>{
-        if(f.geometry.type==='Polygon') areaSqft += turf.area(f)*10.7639;
+        if(f.geometry.type==='Polygon')   areaSqm += turf.area(f);
         if(f.geometry.type==='LineString') lengthM += turf.length(f,{units:'kilometers'})*1000;
       });
-      const { base, ratePoly, rateLine } = currentRates();
-      const total = base + areaSqft*ratePoly + lengthM*rateLine;
+      const areaSqft = areaSqm * 10.7639;
+      const lengthFt = lengthM * 3.28084;
+      const { base, rateSqft, rateFt } = currentRates();
+      const total = base + areaSqft*rateSqft + lengthFt*rateFt; // priced in Imperial
 
       const addrText = selectedAddress || (document.querySelector('.mapboxgl-ctrl-geocoder input')?.value || 'Unknown address');
 
@@ -296,15 +366,21 @@
         .select().single();
       if(propErr) throw propErr;
 
-      // 2) zones
+      // 2) zones (store geometry + both units + label)
       const rows = fc.features.map(f=>{
         const isPoly = f.geometry.type==='Polygon';
+        const zoneAreaSqm  = isPoly ? turf.area(f) : 0;
+        const zoneAreaSqft = isPoly ? zoneAreaSqm * 10.7639 : 0;
+        const zoneLenM     = !isPoly ? turf.length(f,{units:'kilometers'})*1000 : 0;
+        const zoneLenFt    = !isPoly ? zoneLenM * 3.28084 : 0;
         return {
           property_id: prop.id,
           kind: isPoly ? (mode==='lawn' ? 'lawn' : 'lot_snow') : (mode==='lawn' ? 'hardscape' : 'sidewalk_snow'),
           geojson: f,
-          area_sqft: isPoly ? turf.area(f)*10.7639 : 0,
-          length_m:  !isPoly ? turf.length(f,{units:'kilometers'})*1000 : 0,
+          area_sqft: zoneAreaSqft,
+          area_sqm:  zoneAreaSqm,
+          length_m:  zoneLenM,
+          length_ft: zoneLenFt,
           label: (f.properties && f.properties.label) || null
         };
       });
@@ -313,24 +389,26 @@
         if(zErr) throw zErr;
       }
 
-      // 3) quote
+      // 3) quote (store both systems too)
       const { data: quote, error: qErr } = await supa
         .from('quotes')
         .insert({
           account_id: ACCOUNT_ID,
           property_id: prop.id,
           base_fee: base,
-          rate_lawn: ratePoly,   // reuse for snow poly rate
-          rate_drive: rateLine,  // reuse for snow line rate
-          lawn_sqft: areaSqft,   // reuse for lot sqft in snow
-          drive_m: lengthM,      // reuse for sidewalk meters in snow
+          rate_sqft: rateSqft,   // Imperial area rate
+          rate_ft:   rateFt,     // Imperial linear rate
+          lawn_sqft: areaSqft,   // totals in Imperial
+          drive_ft:  lengthFt,
+          lawn_sqm:  areaSqm,    // and Metric
+          drive_m:   lengthM,
           total,
           status: mode==='snow' ? 'sent_snow' : 'sent'
         })
         .select().single();
       if(qErr) throw qErr;
 
-      alert('Saved! Quote #' + quote.id + ' • $' + fmt2(total));
+      alert('Saved! Quote #' + quote.id + ' • $' + (Math.round(total*100)/100).toLocaleString());
       // window.location.href = `quote-review.html?quoteId=${quote.id}`;
     }catch(err){
       console.error(err);
@@ -338,7 +416,8 @@
     }
   }
 
-  // first calc
+  // Kickoff
+  setModeUI();
   recalc();
 </script>
 </body>
