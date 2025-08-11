@@ -149,4 +149,29 @@ label { font-size:.875rem; color: var(--yd-muted); display:block; margin-bottom:
   padding: 1.25rem;
 }
 
-/
+/* ====== KBD ====== */
+.kbd{ font-size:.75rem; padding:.2rem .45rem; border-radius:8px; border:1px solid var(--yd-border); background:rgba(255,255,255,0.04); }
+
+/* ====== Forms grid ====== */
+.form-grid{ display:grid; gap:1rem; }
+@media (min-width: 780px){
+  .form-grid.cols-2{ grid-template-columns: 1fr 1fr; }
+}
+
+/* ====== Spacing utils ====== */
+.mt-2{ margin-top:.5rem; } .mt-3{ margin-top:.75rem; } .mt-4{ margin-top:1rem; }
+.mb-2{ margin-bottom:.5rem; } .mb-3{ margin-bottom:.75rem; } .mb-4{ margin-bottom:1rem; }
+.p-2{ padding:.5rem; } .p-3{ padding:.75rem; } .p-4{ padding:1rem; } .p-6{ padding:1.5rem; }
+
+/* ====== Light mode (optional toggle) ====== */
+@media (prefers-color-scheme: light){
+  :root{
+    --yd-bg: #f7f8fb;
+    --yd-surface: #ffffff;
+    --yd-text: #0c0d10;
+    --yd-muted: #586174;
+    --yd-border: rgba(0,0,0,0.08);
+    --shadow-1: 0 8px 20px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.05);
+  }
+  .btn-primary{ color:#052c1e; }
+}
